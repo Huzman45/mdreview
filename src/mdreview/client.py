@@ -33,9 +33,9 @@ class ApiError(RuntimeError):
 
 
 class Client:
-    def __init__(self, settings: Settings, *, autostart: bool = True) -> None:
+    def __init__(self, settings: Settings, *, autostart: bool | None = None) -> None:
         self._settings = settings
-        self._autostart = autostart
+        self._autostart = config.autostart_enabled() if autostart is None else autostart
         self._http = httpx.Client(base_url=settings.base_url, timeout=10.0)
 
     def __enter__(self) -> Client:

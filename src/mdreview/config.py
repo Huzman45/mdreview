@@ -17,6 +17,7 @@ DEFAULT_HOST = "127.0.0.1"
 ENV_HOST = "MDREVIEW_HOST"
 ENV_PORT = "MDREVIEW_PORT"
 ENV_DATA_DIR = "MDREVIEW_DATA_DIR"
+ENV_AUTOSTART = "MDREVIEW_AUTOSTART"
 
 
 def data_dir() -> Path:
@@ -57,6 +58,19 @@ def default_port() -> int:
 
 def default_host() -> str:
     return os.environ.get(ENV_HOST, DEFAULT_HOST)
+
+
+def autostart_enabled() -> bool:
+    """Whether a command may start a server for itself.
+
+    Disabling this is useful in scripted contexts that would rather fail
+    loudly than have a background process appear.
+    """
+    return os.environ.get(ENV_AUTOSTART, "1").strip().lower() not in {
+        "0",
+        "false",
+        "no",
+    }
 
 
 def is_loopback(host: str) -> bool:
