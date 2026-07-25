@@ -18,14 +18,39 @@ def test_routable_addresses_are_rejected(host: str) -> None:
     assert not config.is_loopback(host)
 
 
-def test_require_loopback_refuses_a_routable_bind() -> None:
-    with pytest.raises(ValueError, match="no authentication"):
-        config.require_loopback("0.0.0.0")
+def test_safe_bind_refuses_lan_without_an_opt_in() -> None:
+    with pytest.raises(ValueError, match="--allow-lan"):
+        config.require_safe_bind("10.31.41.35")
 
 
 def test_settings_refuse_a_routable_host(tmp_path: Path) -> None:
     with pytest.raises(ValueError):
         Settings.load(host="0.0.0.0", port=1234, database=tmp_path / "db.sqlite")
+
+
+def test_private_lan_address_is_accepted_with_an_opt_in(tmp_path: Path) -> None:
+    settings = Settings.load(
+        host="10.31.41.35",
+        port=1234,
+        database=tmp_path / "db.sqlite",
+        allow_lan=True,
+    )
+    assert settings.host == "10.31.41.35"
+    assert settings.allow_lan is True
+
+
+@pytest.mark.parametrize("host", ["0.0.0.0", "::", "8.8.8.8", "example.com"])
+def test_allow_lan_still_refuses_broad_or_public_binds(host: str) -> None:
+    with pytest.raises(ValueError):
+        config.require_safe_bind(host, allow_lan=True)
+
+
+def test_allow_lan_can_be_enabled_by_environment(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("MDREVIEW_ALLOW_LAN", "1")
+    settings = Settings.load(host="192.168.0.107", port=1234, database=tmp_path / "db.sqlite")
+    assert settings.allow_lan is True
 
 
 def test_data_dir_honours_override(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

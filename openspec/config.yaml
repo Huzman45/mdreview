@@ -3,7 +3,7 @@ schema: spec-driven
 context: |
   # mdreview
 
-  A localhost-only tool that turns a markdown file into a reviewable web page so a
+  A local-first tool that turns a markdown file into a reviewable web page so a
   human can approve it or leave block-level comments, and an AI coding agent can
   read the outcome back via a CLI. It exists to remove the friction of reviewing
   agent-authored plan files (PLAN.md and friends) in a text editor with no way to
@@ -12,7 +12,9 @@ context: |
   ## Tech stack
 
   - Python 3.12, dependencies and venv managed by `uv`
-  - FastAPI + uvicorn (single worker, bound to 127.0.0.1 only, no auth)
+  - FastAPI + uvicorn (single worker, loopback by default, no auth). An explicit
+    opt-in may bind one concrete private LAN address for phone access; wildcard
+    and public binds remain forbidden
   - SQLite in WAL mode at `~/.local/share/mdreview/db.sqlite`
   - Schema migrations via `PRAGMA user_version` and an ordered list of SQL steps
     (no Alembic)
@@ -69,8 +71,8 @@ context: |
 
   Authentication, multi-user support, cloud sync, threaded comment discussions,
   rich-text editing, realtime collaborative cursors, and comment anchor relocation
-  across versions. This is a single-user tool on loopback. Every one of these is
-  out of scope.
+  across versions. This is a single-user local tool; optional private-LAN access
+  is unauthenticated and explicitly enabled. Every one of these is out of scope.
 
   ## Conventions
 

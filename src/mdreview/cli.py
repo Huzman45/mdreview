@@ -24,14 +24,21 @@ app = typer.Typer(
 )
 
 HostOption = Annotated[
-    str | None, typer.Option("--host", help="Loopback address to bind or connect to.")
+    str | None, typer.Option("--host", help="Address to bind or connect to.")
 ]
 PortOption = Annotated[int | None, typer.Option("--port", help="Port to bind or connect to.")]
+AllowLanOption = Annotated[
+    bool,
+    typer.Option(
+        "--allow-lan",
+        help="Allow an unauthenticated bind to one private LAN address.",
+    ),
+]
 
 
-def _settings(host: str | None, port: int | None) -> Settings:
+def _settings(host: str | None, port: int | None, allow_lan: bool = False) -> Settings:
     try:
-        return Settings.load(host=host, port=port)
+        return Settings.load(host=host, port=port, allow_lan=allow_lan)
     except ValueError as exc:
         typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(Exit.ERROR) from exc
@@ -62,6 +69,7 @@ def main(
 def serve(
     host: HostOption = None,
     port: PortOption = None,
+    allow_lan: AllowLanOption = False,
     foreground: Annotated[
         bool,
         typer.Option("--foreground/--detach", help="Run attached to this terminal."),
@@ -70,7 +78,13 @@ def serve(
     """Run the review server."""
     from . import server
 
-    settings = _settings(host, port)
+    settings = _settings(host, port, allow_lan)
+    if not config.is_loopback(settings.host):
+        typer.secho(
+            f"warning: exposing unauthenticated reviews at {settings.base_url}",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
     if not foreground:
         from .client import Client
 
@@ -108,13 +122,14 @@ def submit(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON.")] = False,
     host: HostOption = None,
     port: PortOption = None,
+    allow_lan: AllowLanOption = False,
 ) -> None:
     """Publish a markdown file for review and print its URL."""
     if not path.is_file():
         raise _fail(f"no such file: {path}", Exit.ERROR)
 
     content = path.read_text(encoding="utf-8")
-    settings = _settings(host, port)
+    settings = _settings(host, port, allow_lan)
 
     with Client(settings) as client:
         try:
@@ -150,9 +165,10 @@ def open_document(
     slug: Annotated[str, typer.Argument(help="Document slug.")],
     host: HostOption = None,
     port: PortOption = None,
+    allow_lan: AllowLanOption = False,
 ) -> None:
     """Open a document's review page in the browser."""
-    settings = _settings(host, port)
+    settings = _settings(host, port, allow_lan)
     with Client(settings) as client:
         try:
             document = client.get(f"/api/documents/{slug}")
@@ -191,13 +207,14 @@ def review(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON.")] = False,
     host: HostOption = None,
     port: PortOption = None,
+    allow_lan: AllowLanOption = False,
 ) -> None:
     """Read the review outcome. The exit code carries the result.
 
     0 approved, 2 changes requested, 3 not yet decided, 4 cancelled,
     5 the API could not be reached.
     """
-    settings = _settings(host, port)
+    settings = _settings(host, port, allow_lan)
     with Client(settings) as client:
         state = _state(client, slug)
         _warn_on_version_skew(client)
@@ -216,9 +233,10 @@ def status(
     slug: Annotated[str, typer.Argument(help="Document slug.")],
     host: HostOption = None,
     port: PortOption = None,
+    allow_lan: AllowLanOption = False,
 ) -> None:
     """Print one line describing where a document stands."""
-    settings = _settings(host, port)
+    settings = _settings(host, port, allow_lan)
     with Client(settings) as client:
         state = _state(client, slug)
     typer.echo(
@@ -236,9 +254,10 @@ def resolve(
     refs: Annotated[list[str], typer.Argument(help="Comment references, e.g. C1 C2.")],
     host: HostOption = None,
     port: PortOption = None,
+    allow_lan: AllowLanOption = False,
 ) -> None:
     """Mark comments as addressed."""
-    settings = _settings(host, port)
+    settings = _settings(host, port, allow_lan)
     with Client(settings) as client:
         state = _state(client, slug)
         try:
@@ -265,9 +284,10 @@ def list_documents(
     as_json: Annotated[bool, typer.Option("--json", help="Emit JSON.")] = False,
     host: HostOption = None,
     port: PortOption = None,
+    allow_lan: AllowLanOption = False,
 ) -> None:
     """List submitted documents."""
-    settings = _settings(host, port)
+    settings = _settings(host, port, allow_lan)
     with Client(settings) as client:
         try:
             items = client.get("/api/documents", params={"pending": pending})

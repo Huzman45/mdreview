@@ -8,7 +8,8 @@ headings, paragraphs, bullets or code blocks, then hit **Approve** or **Request
 changes**. The agent reads your decision and your comments back with
 `mdreview review` and carries on.
 
-Localhost only. Single user. No auth, no cloud, no daemon.
+Local-first. Single user. No auth, no cloud, no daemon. Private-LAN access is
+available as an explicit opt-in for reviewing from a phone.
 
 ## Why
 
@@ -125,12 +126,28 @@ outstanding so keep waiting, 4 stop and ask.
 | Variable | Default | Purpose |
 | -------- | ------- | ------- |
 | `MDREVIEW_PORT` | `7391` | Port to bind and connect to |
-| `MDREVIEW_HOST` | `127.0.0.1` | Must be a loopback address |
+| `MDREVIEW_HOST` | `127.0.0.1` | Loopback, or one private IP with LAN opt-in |
 | `MDREVIEW_DATA_DIR` | `~/.local/share/mdreview` | Database and logs |
 | `MDREVIEW_AUTOSTART` | `1` | Set `0` to fail instead of starting a server |
+| `MDREVIEW_ALLOW_LAN` | `0` | Set `1` to permit a private-LAN bind |
 
-The server refuses to bind to a non-loopback address: it has no authentication,
+The server refuses to bind outside loopback by default: it has no authentication,
 so listening on a routable interface would expose every document to the network.
+
+To review from a phone on the same private network, bind one specific interface
+explicitly:
+
+```bash
+mdreview serve --host 10.31.41.35 --allow-lan
+```
+
+Wildcard (`0.0.0.0` / `::`) and public addresses remain forbidden even with the
+opt-in. Anyone able to reach the chosen private address can read documents, add
+comments, and record decisions, so stop the server when you are done.
+
+On macOS, the application firewall may prompt before allowing the Python
+interpreter to accept incoming connections. Approve that prompt for direct LAN
+mode; do not disable the firewall globally.
 
 ## Development
 

@@ -11,7 +11,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 
-from . import __version__, db
+from . import __version__, config, db
 from .config import Settings
 
 
@@ -70,7 +70,8 @@ def connection_for(settings: Settings) -> Iterator[sqlite3.Connection]:
 
 def run(settings: Settings, *, log_file: Path | None = None) -> None:
     """Run the server in the foreground until interrupted."""
-    config = uvicorn.Config(
+    config.require_safe_bind(settings.host, allow_lan=settings.allow_lan)
+    uvicorn_config = uvicorn.Config(
         create_app(settings),
         host=settings.host,
         port=settings.port,
@@ -80,4 +81,4 @@ def run(settings: Settings, *, log_file: Path | None = None) -> None:
     )
     if log_file is not None:
         log_file.parent.mkdir(parents=True, exist_ok=True)
-    uvicorn.Server(config).run()
+    uvicorn.Server(uvicorn_config).run()
