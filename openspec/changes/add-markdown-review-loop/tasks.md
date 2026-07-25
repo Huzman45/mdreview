@@ -55,26 +55,26 @@ onward, and no group leaves it in a non-running state.
 
 ## 3. Rendered review page with block anchors
 
-- [ ] 3.1 Implement `render.py`: `markdown-it-py` configured with HTML disabled, walking
+- [x] 3.1 Implement `render.py`: `markdown-it-py` configured with HTML disabled, walking
   the token stream and wrapping each top-level block with its `token.map` line range
-- [ ] 3.2 Return both the rendered HTML and the list of block ranges, so ranges can be
+- [x] 3.2 Return both the rendered HTML and the list of block ranges, so ranges can be
   validated and tested without parsing HTML
-- [ ] 3.3 Implement link-scheme filtering to neutralise `javascript:` and other
+- [x] 3.3 Implement link-scheme filtering to neutralise `javascript:` and other
   non-allow-listed targets
-- [ ] 3.4 Add a `quote_lines` helper extracting the markdown source for a line range
-- [ ] 3.5 Build the Jinja2 base template and the document template with autoescaping on;
+- [x] 3.4 Add a `quote_lines` helper extracting the markdown source for a line range
+- [x] 3.5 Build the Jinja2 base template and the document template with autoescaping on;
   vendor htmx and a stylesheet into `static/`
-- [ ] 3.6 Add `GET /d/{slug}` and `GET /d/{slug}/v/{n}` rendering a version with its
+- [x] 3.6 Add `GET /d/{slug}` and `GET /d/{slug}/v/{n}` rendering a version with its
   title, version number, status, and project path; 404 for an unknown slug
-- [ ] 3.7 Add the block-selection JavaScript: click a block to select it and reveal the
+- [x] 3.7 Add the block-selection JavaScript: click a block to select it and reveal the
   comment form, keyed off the `data-line-start` and `data-line-end` attributes
-- [ ] 3.8 Implement the `open` CLI command and make `submit` open the browser by default
+- [x] 3.8 Implement the `open` CLI command and make `submit` open the browser by default
   with a `--no-open` opt-out
-- [ ] 3.9 Tests: headings, paragraphs, individual list items, and fences each yield a
+- [x] 3.9 Tests: headings, paragraphs, individual list items, and fences each yield a
   distinct range; ranges lie within content bounds; a range round-trips to its source
   text via `quote_lines`; `<script>` and inline handlers render as text; a
   `javascript:` link target is stripped; unknown slug returns 404
-- [ ] 3.10 Verify by hand: submit a document with nested lists, tables, and code blocks
+- [x] 3.10 Verify by hand: submit a document with nested lists, tables, and code blocks
   and confirm every block is individually selectable in the browser
 
 ## 4. Block comments
