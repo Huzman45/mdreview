@@ -79,24 +79,24 @@ onward, and no group leaves it in a non-running state.
 
 ## 4. Block comments
 
-- [ ] 4.1 Implement comment writes in `store.py`: allocate the next `Cn` reference per
+- [x] 4.1 Implement comment writes in `store.py`: allocate the next `Cn` reference per
   version, capture the quoted source at creation, and insert with state `open`
-- [ ] 4.2 Validate anchors against version bounds and reject empty bodies
-- [ ] 4.3 Implement comment listing per version with state filtering
-- [ ] 4.4 Implement resolution by reference: idempotent for already-resolved comments,
+- [x] 4.2 Validate anchors against version bounds and reject empty bodies
+- [x] 4.3 Implement comment listing per version with state filtering
+- [x] 4.4 Implement resolution by reference: idempotent for already-resolved comments,
   erroring on an unknown reference
-- [ ] 4.5 Mark all `open` comments on prior versions `outdated` when a new version is
+- [x] 4.5 Mark all `open` comments on prior versions `outdated` when a new version is
   recorded, leaving `resolved` comments and all anchors untouched
-- [ ] 4.6 Add `POST /api/documents/{slug}/versions/{n}/comments`,
+- [x] 4.6 Add `POST /api/documents/{slug}/versions/{n}/comments`,
   `GET .../comments`, and `POST .../comments/{ref}/resolve`
-- [ ] 4.7 Add the htmx comment form and comment list fragment, rendering bodies as
+- [x] 4.7 Add the htmx comment form and comment list fragment, rendering bodies as
   escaped plain text beside their anchored blocks
-- [ ] 4.8 Tests: comment creation and anchoring; quoted text captured; out-of-bounds
+- [x] 4.8 Tests: comment creation and anchoring; quoted text captured; out-of-bounds
   anchor rejected; empty body rejected; references assigned in order and scoped per
   version; references stable across resolution; resolve idempotent; unknown reference
   errors; new version outdates open comments but not resolved ones; anchors never
   rewritten; HTML in a body is escaped in the page
-- [ ] 4.9 Verify by hand: comment on three blocks, resolve one, submit a new version,
+- [x] 4.9 Verify by hand: comment on three blocks, resolve one, submit a new version,
   confirm the remaining open comments show as outdated against version 1
 
 ## 5. Review decisions

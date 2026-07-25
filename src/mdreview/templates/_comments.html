@@ -1,0 +1,33 @@
+{# Comment bodies and quoted source are rendered as escaped plain text.
+   They are never parsed as markdown, so a comment cannot inject markup. #}
+<div class="comments" id="comments">
+  <h2 class="comments-title">
+    Comments
+    {% if unresolved %}<span class="badge">{{ unresolved }} open</span>{% endif %}
+  </h2>
+
+  {% if not comments %}
+    <p class="comments-empty">Click any block above to comment on it.</p>
+  {% else %}
+    <ul class="comment-list">
+      {% for comment in comments %}
+      <li class="comment comment-{{ comment.state.value }}" data-ref="{{ comment.ref }}"
+          data-line-start="{{ comment.line_start }}" data-line-end="{{ comment.line_end }}">
+        <div class="comment-head">
+          <span class="comment-ref">{{ comment.ref }}</span>
+          <span class="comment-lines">L{{ comment.line_start }}{% if comment.line_end != comment.line_start %}-{{ comment.line_end }}{% endif %}</span>
+          <span class="comment-state">{{ comment.state.value }}</span>
+        </div>
+        <pre class="comment-quote">{{ comment.quoted }}</pre>
+        <p class="comment-body">{{ comment.body }}</p>
+        {% if comment.state.value == "open" and can_edit %}
+        <form hx-post="/d/{{ slug }}/v/{{ version.n }}/comments/{{ comment.ref }}/resolve"
+              hx-target="#sidebar" hx-swap="outerHTML">
+          <button class="link-button" type="submit">Resolve</button>
+        </form>
+        {% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+</div>
