@@ -41,7 +41,15 @@
     );
   }
 
+  // The source view has its own line-based selection and no blocks at all.
+  // Without this guard the handler below would clear that view's selection the
+  // instant it was made.
+  function hasBlocks() {
+    return document.querySelector(".mdr-block") !== null;
+  }
+
   document.addEventListener("click", function (event) {
+    if (!hasBlocks()) return;
     // Let links and form controls behave normally.
     if (event.target.closest("a, button, input, textarea, select")) return;
 
