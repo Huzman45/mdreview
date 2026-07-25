@@ -33,6 +33,10 @@ def create_app(settings: Settings) -> FastAPI:
     )
     app.state.settings = settings
 
+    from .api import router as api_router
+
+    app.include_router(api_router)
+
     @app.get("/healthz")
     def healthz() -> dict[str, object]:
         return {

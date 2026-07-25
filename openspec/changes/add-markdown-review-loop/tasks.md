@@ -34,23 +34,23 @@ onward, and no group leaves it in a non-running state.
 
 ## 2. Document submission and immutable versions
 
-- [ ] 2.1 Implement document and version writes in `store.py`: create document, derive a
+- [x] 2.1 Implement document and version writes in `store.py`: create document, derive a
   unique slug with a numeric suffix on collision, and record a version with its
   SHA-256 digest
-- [ ] 2.2 Implement sequential per-document version numbering
-- [ ] 2.3 Implement digest-based idempotency per design D8: identical content against a
+- [x] 2.2 Implement sequential per-document version numbering
+- [x] 2.3 Implement digest-based idempotency per design D8: identical content against a
   pending latest version reuses it and reports the reuse; identical content against a
   decided version opens a new version
-- [ ] 2.4 Reject submissions whose content is empty or whitespace-only
-- [ ] 2.5 Add `POST /api/documents` accepting content, optional slug, title, project
+- [x] 2.4 Reject submissions whose content is empty or whitespace-only
+- [x] 2.5 Add `POST /api/documents` accepting content, optional slug, title, project
   path, and session id, returning slug, version number, review URL, and reuse flag
-- [ ] 2.6 Add `GET /api/documents/{slug}` and `GET /api/documents` with a pending filter
-- [ ] 2.7 Implement the `submit` CLI command: read the file, send the working directory
+- [x] 2.6 Add `GET /api/documents/{slug}` and `GET /api/documents` with a pending filter
+- [x] 2.7 Implement the `submit` CLI command: read the file, send the working directory
   as project path automatically, print the review URL, fail clearly on a missing path
-- [ ] 2.8 Tests: version 1 creation; sequential numbering; per-document independence;
+- [x] 2.8 Tests: version 1 creation; sequential numbering; per-document independence;
   digest reuse on pending; new version after a decision; empty content rejected;
   earlier versions unchanged by a later submission; slug collision suffixing
-- [ ] 2.9 Verify by hand: submit a real markdown file twice unchanged, confirm one
+- [x] 2.9 Verify by hand: submit a real markdown file twice unchanged, confirm one
   version; submit modified content, confirm version 2
 
 ## 3. Rendered review page with block anchors
