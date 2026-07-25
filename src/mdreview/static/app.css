@@ -1058,3 +1058,68 @@ li.mdr-block {
   padding-right: 0.6rem;
   min-height: 1.65em;
 }
+
+/* -- diff --------------------------------------------------------------- */
+
+.diffstat { font-family: var(--mono); font-size: 0.75rem; }
+.diffstat .added { color: var(--ok); }
+.diffstat .removed { color: var(--danger); }
+
+.diff-empty { margin-top: 1.5rem; }
+
+.difftable {
+  width: 100%;
+  margin-top: 1.25rem;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+
+.diffrow td { padding: 0; vertical-align: top; }
+
+.diff-no {
+  width: 2.8rem;
+  min-width: 2.8rem;
+  text-align: right;
+  padding: 0 0.45rem;
+  color: var(--faint);
+  background: var(--surface-sunken);
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.diff-text {
+  width: 100%;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding-right: 0.6rem;
+}
+
+.diff-marker {
+  display: inline-block;
+  width: 1.1rem;
+  padding-left: 0.35rem;
+  color: var(--faint);
+  user-select: none;
+}
+
+.diff-added { background: var(--ok-soft); }
+.diff-added .diff-marker { color: var(--ok); }
+.diff-removed { background: var(--danger-soft); }
+.diff-removed .diff-marker { color: var(--danger); }
+
+.diff-skip .diff-text {
+  color: var(--faint);
+  font-style: italic;
+  padding-left: 0.6rem;
+  background: var(--surface-sunken);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 34rem) {
+  .diff-no { width: 2.1rem; min-width: 2.1rem; padding: 0 0.25rem; }
+}

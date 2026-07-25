@@ -61,18 +61,18 @@ every group.
 
 ## 5. Version diff view
 
-- [ ] 5.1 Implement a unified line diff over two versions using `difflib`, returning
+- [x] 5.1 Implement a unified line diff over two versions using `difflib`, returning
   typed rows with both sides' line numbers and limited surrounding context
-- [ ] 5.2 Add a `GET /d/{slug}/diff/{a}/{b}` route, 404 for unknown document or version
-- [ ] 5.3 Template the diff with added, removed and context styling, and a clear
+- [x] 5.2 Add a `GET /d/{slug}/diff/{a}/{b}` route, 404 for unknown document or version
+- [x] 5.3 Template the diff with added, removed and context styling, and a clear
   "nothing changed" state
-- [ ] 5.4 Link a version to the comparison with its predecessor, and offer no link when
+- [x] 5.4 Link a version to the comparison with its predecessor, and offer no link when
   there is only one version
-- [ ] 5.5 Ensure the diff carries no comment form and no decision control
-- [ ] 5.6 Tests: added, removed and context rows are classified correctly; non-adjacent
+- [x] 5.5 Ensure the diff carries no comment form and no decision control
+- [x] 5.6 Tests: added, removed and context rows are classified correctly; non-adjacent
   versions compare; identical content reports no change; line numbers belong to the
   correct side; unknown document and version are 404; no form present
-- [ ] 5.7 Verify by hand against two real versions of a document
+- [x] 5.7 Verify by hand against two real versions of a document
 
 ## 6. Integration
 
