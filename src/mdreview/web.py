@@ -40,6 +40,12 @@ def display_path(value: str | None) -> str:
 
 templates.env.filters["display_path"] = display_path
 
+#: Inlined into <head> so the stored colour scheme is applied before the first
+#: paint. Served from a file rather than duplicated in the template, and read
+#: once at import because it is our own asset, not user input.
+THEME_SCRIPT = (STATIC_DIR / "theme.js").read_text(encoding="utf-8")
+templates.env.globals["theme_script"] = THEME_SCRIPT
+
 router = APIRouter()
 
 Conn = Annotated[sqlite3.Connection, Depends(get_conn)]

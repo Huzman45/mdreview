@@ -4,9 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#161a21" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff">
   <title>{% block title %}mdreview{% endblock %}</title>
+  {# Inline and before the stylesheet: applying the stored scheme after render
+     would flash the wrong colours on every load. #}
+  <script>{{ theme_script|safe }}</script>
   <link rel="stylesheet" href="/static/app.css">
   <script src="/static/htmx.min.js" defer></script>
   <script src="/static/app.js" defer></script>
@@ -16,6 +18,17 @@
   <header class="topbar">
     <a class="brand" href="/">mdreview</a>
     {% block topbar %}{% endblock %}
+    <div class="theme-control" role="group" aria-label="Colour scheme">
+      <button type="button" data-theme-choice="light" aria-pressed="false" title="Light">
+        <span aria-hidden="true">☀</span><span class="visually-hidden">Light</span>
+      </button>
+      <button type="button" data-theme-choice="system" aria-pressed="false" title="Follow system">
+        <span aria-hidden="true">◐</span><span class="visually-hidden">System</span>
+      </button>
+      <button type="button" data-theme-choice="dark" aria-pressed="false" title="Dark">
+        <span aria-hidden="true">☾</span><span class="visually-hidden">Dark</span>
+      </button>
+    </div>
   </header>
   <main>
     {% block content %}{% endblock %}

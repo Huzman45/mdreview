@@ -147,3 +147,30 @@ def test_diagram_library_is_only_loaded_when_needed(api: TestClient) -> None:
 def test_diagram_library_is_served_locally(api: TestClient) -> None:
     assert api.get("/static/mermaid.min.js").status_code == 200
     assert api.get("/static/diagrams.js").status_code == 200
+
+
+# -- theme ------------------------------------------------------------------
+
+
+def test_theme_control_is_present_on_every_page(api: TestClient) -> None:
+    submit(api)
+    for path in ("/", "/d/plan"):
+        page = api.get(path).text
+        assert 'data-theme-choice="light"' in page
+        assert 'data-theme-choice="dark"' in page
+        assert 'data-theme-choice="system"' in page
+
+
+def test_theme_script_is_inlined_before_the_stylesheet(api: TestClient) -> None:
+    """Applying the stored scheme after paint would flash the wrong colours."""
+    page = api.get("/").text
+    assert "mdreview-theme" in page
+    assert page.index("mdreview-theme") < page.index('href="/static/app.css"')
+
+
+def test_stylesheet_defines_dark_tokens_once(api: TestClient) -> None:
+    """Dark tokens in both a media query and an attribute selector can drift."""
+    css = api.get("/static/app.css").text
+    assert css.count("--surface-sunken: #1c212a") == 1
+    assert ':root[data-theme="dark"]' in css
+    assert "prefers-color-scheme: dark" not in css

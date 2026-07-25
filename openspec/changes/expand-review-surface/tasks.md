@@ -32,15 +32,15 @@ every group.
 
 ## 3. Theme preference
 
-- [ ] 3.1 Restructure the stylesheet so dark tokens apply via both the media query and
+- [x] 3.1 Restructure the stylesheet so dark tokens apply via both the media query and
   an explicit `[data-theme="dark"]`, with `[data-theme="light"]` forcing light
-- [ ] 3.2 Add the three-state control to the base template top bar
-- [ ] 3.3 Persist the choice in `localStorage` and apply it before first paint with an
+- [x] 3.2 Add the three-state control to the base template top bar
+- [x] 3.3 Persist the choice in `localStorage` and apply it before first paint with an
   inline head script
-- [ ] 3.4 Reflect the active choice in the control, and update `theme-color` to match
-- [ ] 3.5 Tests: the control is present on every page type; the inline script runs
+- [x] 3.4 Reflect the active choice in the control, and update `theme-color` to match
+- [x] 3.5 Tests: the control is present on every page type; the inline script runs
   before the stylesheet; both explicit attributes are honoured by the stylesheet
-- [ ] 3.6 Verify in a browser that light, dark and system all apply, persist across
+- [x] 3.6 Verify in a browser that light, dark and system all apply, persist across
   navigation, and produce no flash on load
 
 ## 4. Raw line view
