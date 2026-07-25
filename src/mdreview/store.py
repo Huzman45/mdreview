@@ -383,3 +383,83 @@ def count_unresolved(conn: sqlite3.Connection, version_id: int) -> int:
         "SELECT COUNT(*) FROM comments WHERE version_id = ? AND state = ?",
         (version_id, CommentState.OPEN.value),
     ).fetchone()[0]
+
+
+# -- decisions --------------------------------------------------------------
+
+
+class Conflict(StoreError):
+    """The version has already been decided."""
+
+
+DECIDABLE = (
+    ReviewStatus.APPROVED,
+    ReviewStatus.CHANGES_REQUESTED,
+    ReviewStatus.CANCELLED,
+)
+
+
+def decide(
+    conn: sqlite3.Connection,
+    *,
+    version: Version,
+    status: ReviewStatus,
+    note: str | None = None,
+) -> Version:
+    """Close a review round.
+
+    A version carries exactly one decision. Changing your mind means
+    submitting a new version, which is also what gives the agent something to
+    react to; silently overwriting a decision it may already have acted on
+    would be worse than refusing.
+    """
+    if status not in DECIDABLE:
+        raise StoreError(f"{status.value!r} is not a decision")
+    if version.status.is_decided:
+        raise Conflict(
+            f"version {version.n} was already {version.status.value}; "
+            f"submit a new version to open another round"
+        )
+
+    note = (note or "").strip() or None
+
+    # Requesting changes with no feedback at all would hand the agent a
+    # revision request it cannot act on.
+    if (
+        status is ReviewStatus.CHANGES_REQUESTED
+        and count_unresolved(conn, version.id) == 0
+        and note is None
+    ):
+        raise StoreError("requesting changes needs at least one open comment or a summary note")
+
+    conn.execute(
+        "UPDATE versions SET status = ?, decision_note = ?, decided_at = ? WHERE id = ?",
+        (status.value, note, now(), version.id),
+    )
+    row = conn.execute("SELECT * FROM versions WHERE id = ?", (version.id,)).fetchone()
+    return Version.from_row(row)
+
+
+@dataclass(frozen=True, slots=True)
+class DocumentState:
+    """Everything an agent needs on resume, in one answer."""
+
+    document: Document
+    version: Version
+    unresolved: tuple[Comment, ...]
+
+    @property
+    def status(self) -> ReviewStatus:
+        return self.version.status
+
+
+def document_state(conn: sqlite3.Connection, slug: str) -> DocumentState:
+    document = require_document(conn, slug)
+    version = latest_version(conn, document.id)
+    if version is None:  # pragma: no cover - documents always have a version
+        raise NotFound(f"document {slug!r} has no versions")
+    return DocumentState(
+        document=document,
+        version=version,
+        unresolved=tuple(open_comments(conn, version.id)),
+    )

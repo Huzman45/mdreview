@@ -101,6 +101,7 @@ def _sidebar_context(
         "comments": store.list_comments(conn, version.id),
         "unresolved": store.count_unresolved(conn, version.id),
         "can_edit": is_latest and version.status is ReviewStatus.PENDING,
+        "is_latest": is_latest,
     }
 
 
@@ -111,10 +112,40 @@ def _sidebar(
     version: store.Version,
     *,
     error: str | None = None,
+    decision_error: str | None = None,
 ) -> HTMLResponse:
     context = _sidebar_context(conn, document, version)
     context["error"] = error
+    context["decision_error"] = decision_error
     return templates.TemplateResponse(request, "_sidebar.html", context)
+
+
+@router.post("/d/{slug}/v/{n}/decision", response_class=HTMLResponse)
+def record_decision(
+    slug: str,
+    n: int,
+    request: Request,
+    conn: Conn,
+    status_value: Annotated[str, Form(alias="status")] = "",
+    note: Annotated[str, Form()] = "",
+) -> HTMLResponse:
+    document = _require_document(conn, slug)
+    version = _require_version(conn, document, n)
+
+    try:
+        decision = ReviewStatus(status_value)
+    except ValueError:
+        return _sidebar(request, conn, document, version, decision_error="Unknown decision.")
+
+    try:
+        store.decide(conn, version=version, status=decision, note=note)
+    except store.Conflict as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except StoreError as exc:
+        return _sidebar(request, conn, document, version, decision_error=str(exc))
+
+    refreshed = store.require_version(conn, document.id, n)
+    return _sidebar(request, conn, document, refreshed)
 
 
 @router.post("/d/{slug}/v/{n}/comments", response_class=HTMLResponse)
