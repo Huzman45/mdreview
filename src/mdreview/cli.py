@@ -80,11 +80,16 @@ def serve(
 
     settings = _settings(host, port, allow_lan)
     if not config.is_loopback(settings.host):
+        from . import tokens
+
+        entry = f"{settings.base_url}/?{tokens.QUERY_PARAM}={tokens.ensure()}"
         typer.secho(
-            f"warning: exposing unauthenticated reviews at {settings.base_url}",
+            "warning: reviews are exposed on the network. Open this link to "
+            "authorise a device; anyone holding it can read and change reviews:",
             fg=typer.colors.YELLOW,
             err=True,
         )
+        typer.secho(entry, fg=typer.colors.YELLOW, err=True)
     if not foreground:
         from .client import Client
 

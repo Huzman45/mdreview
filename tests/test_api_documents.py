@@ -29,14 +29,16 @@ def test_submit_creates_a_document(api: TestClient) -> None:
     assert payload["url"].endswith("/d/plan")
 
 
-def test_submit_url_uses_the_selected_lan_address(tmp_path) -> None:
+def test_submit_url_uses_the_selected_lan_address(data_dir, db_file) -> None:
     settings = Settings(
         host="10.31.41.35",
         port=7391,
-        database=tmp_path / "db.sqlite",
+        database=db_file,
         allow_lan=True,
     )
-    with TestClient(create_app(settings)) as client:
+    # A LAN-bound server now requires a token from anything that is not
+    # loopback, so this connects as loopback the way the agent CLI does.
+    with TestClient(create_app(settings), client=("127.0.0.1", 5000)) as client:
         payload = client.post(
             "/api/documents",
             json={"content": "# Plan\n", "source_name": "plan"},

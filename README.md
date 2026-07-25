@@ -106,6 +106,24 @@ code: 0 proceed, 2 address the comments and resubmit, 3 the review is still
 outstanding so keep waiting, 4 stop and ask.
 ```
 
+## The review page
+
+- **Rendered view** — the document as formatted prose. Click any heading,
+  paragraph, bullet, table, diagram or code block to comment on it.
+- **Source view** (`/d/<slug>/v/<n>/raw`) — numbered lines. Click one, shift-click
+  another to extend. This is how you comment on a single line *inside* a fenced
+  code block, which block anchoring cannot isolate.
+- **Changes view** (`/d/<slug>/diff/<a>/<b>`) — a unified line diff between two
+  versions, so you can see what a revision actually changed.
+- **Theme** — light, dark, or follow the system, remembered across visits.
+
+Markdown task lists render as real checkboxes. They are read-only: the agent owns
+the file, so nothing on the page can edit a document that is about to be revised.
+
+Fenced blocks tagged `mermaid` render as diagrams. A diagram that fails to parse
+shows its source instead, so a malformed one never hides content. Mermaid is
+vendored and loaded only on pages that actually contain a diagram.
+
 ## How it works
 
 - **A review round is a version.** Every `submit` snapshots the content and its
@@ -142,8 +160,37 @@ mdreview serve --host 10.31.41.35 --allow-lan
 ```
 
 Wildcard (`0.0.0.0` / `::`) and public addresses remain forbidden even with the
-opt-in. Anyone able to reach the chosen private address can read documents, add
-comments, and record decisions, so stop the server when you are done.
+opt-in.
+
+### The LAN token
+
+A server bound to a LAN address requires a **capability token** from anything
+that is not loopback. The URL printed at startup contains it, so opening that
+link on your phone is all that is needed — the token is then remembered in a
+cookie for that origin.
+
+Requests from loopback never need the token, so the agent CLI is unaffected.
+
+```
+warning: reviews are exposed on the network. Open this link to authorise a
+device; anyone holding it can read and change reviews:
+http://10.31.41.35:7391/?t=<token>
+```
+
+The token lives at `~/.local/share/mdreview/lan_token`, mode `0600`. Delete that
+file to revoke every device; the next LAN start mints a new one.
+
+A server binds one address, so a LAN-bound server is not listening on loopback.
+The agent will simply start its own loopback server on demand, and the two share
+the same SQLite database in WAL mode — a document submitted by the agent appears
+immediately on the LAN server. Nothing needs configuring for this; it is just
+worth knowing that two processes is the normal shape when LAN access is on.
+
+**What this does and does not protect.** The token stops other machines on a
+shared network from casually reaching your reviews. Traffic is plaintext HTTP by
+design, so it is **not** protection against someone able to read packets on the
+wire, and anyone with a shell on your machine can read the token file just as
+they can read the database. Stop the server when you are done.
 
 On macOS, the application firewall may prompt before allowing the Python
 interpreter to accept incoming connections. Approve that prompt for direct LAN
