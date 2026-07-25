@@ -128,3 +128,22 @@ def test_a_sibling_of_home_is_not_abbreviated() -> None:
     from mdreview.web import display_path
 
     assert display_path(str(Path.home()) + "-backup/x") == str(Path.home()) + "-backup/x"
+
+
+def test_diagram_library_is_only_loaded_when_needed(api: TestClient) -> None:
+    """Mermaid is megabytes; a document without diagrams must not pay for it."""
+    api.post("/api/documents", json={"content": PLAN, "source_name": "plain"})
+    assert "diagrams.js" not in api.get("/d/plain").text
+
+    api.post(
+        "/api/documents",
+        json={"content": "# D\n\n```mermaid\ngraph TD;\n  A-->B;\n```\n", "source_name": "dia"},
+    )
+    page = api.get("/d/dia").text
+    assert "diagrams.js" in page
+    assert 'data-diagram="mermaid"' in page
+
+
+def test_diagram_library_is_served_locally(api: TestClient) -> None:
+    assert api.get("/static/mermaid.min.js").status_code == 200
+    assert api.get("/static/diagrams.js").status_code == 200

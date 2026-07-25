@@ -97,6 +97,7 @@ def _document_page(
             "is_latest": n == max(versions),
             "body": rendered.html,
             "blocks": rendered.blocks,
+            "has_diagrams": rendered.has_diagrams,
             "error": error,
             **_sidebar_context(conn, document, version),
         },

@@ -890,3 +890,30 @@ li.mdr-block {
 .rendered li.task-list-item:has(.task-list-item-checkbox:checked) {
   color: var(--muted);
 }
+
+/* -- diagrams ----------------------------------------------------------- */
+
+.mdr-diagram {
+  margin: 1.1rem 0;
+}
+
+.mdr-diagram-output {
+  display: flex;
+  justify-content: center;
+  padding: 0.9rem;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+}
+
+.mdr-diagram-output svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mdr-diagram-error {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  color: var(--warn);
+}
