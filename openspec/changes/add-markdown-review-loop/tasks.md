@@ -143,18 +143,18 @@ onward, and no group leaves it in a non-running state.
 
 ## 7. Agent skill and documentation
 
-- [ ] 7.1 Write the `md-review` skill with a description that triggers on producing a
+- [x] 7.1 Write the `md-review` skill with a description that triggers on producing a
   plan or design document for human review
-- [ ] 7.2 Document the submit-and-stop step: submit, report the URL, stop without
+- [x] 7.2 Document the submit-and-stop step: submit, report the URL, stop without
   implementing
-- [ ] 7.3 Document reading the outcome on resume, running `review` first and branching on
+- [x] 7.3 Document reading the outcome on resume, running `review` first and branching on
   the exit code, with an explicit action for each of 0, 2, 3, and 4, forbidding
   proceeding on 3
-- [ ] 7.4 Document the revision loop: address comments, resolve those addressed,
+- [x] 7.4 Document the revision loop: address comments, resolve those addressed,
   resubmit for a further round
-- [ ] 7.5 Expand the README: what the tool is, install and run instructions, the CLI
+- [x] 7.5 Expand the README: what the tool is, install and run instructions, the CLI
   surface with exit codes, skill installation path, and an AGENTS.md snippet
-- [ ] 7.6 Add an end-to-end test driving the whole loop through the CLI against a live
+- [x] 7.6 Add an end-to-end test driving the whole loop through the CLI against a live
   server
-- [ ] 7.7 Verify by hand: install the skill, have an agent submit a plan, review it in
+- [x] 7.7 Verify by hand: install the skill, have an agent submit a plan, review it in
   the browser, and confirm the agent picks up the decision on nudge
