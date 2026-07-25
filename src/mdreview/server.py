@@ -33,9 +33,15 @@ def create_app(settings: Settings) -> FastAPI:
     )
     app.state.settings = settings
 
+    from fastapi.staticfiles import StaticFiles
+
     from .api import router as api_router
+    from .web import STATIC_DIR
+    from .web import router as web_router
 
     app.include_router(api_router)
+    app.include_router(web_router)
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
     @app.get("/healthz")
     def healthz() -> dict[str, object]:

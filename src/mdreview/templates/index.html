@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}mdreview{% endblock %}
+
+{% block content %}
+{% if not summaries %}
+  <p class="empty">Nothing submitted yet. Run <code>mdreview submit PLAN.md</code>.</p>
+{% else %}
+<div class="doclist">
+  {% for item in summaries %}
+  <a class="docrow" href="/d/{{ item.document.slug }}">
+    <span class="status status-{{ item.version.status.value }}">{{ item.version.status.value|replace("_", " ") }}</span>
+    <span class="docrow-main">
+      <strong>{{ item.document.title }}</strong>
+      <span class="docrow-sub">
+        {{ item.document.slug }} &middot; v{{ item.version.n }}
+        {% if item.document.project_path %}&middot; {{ item.document.project_path }}{% endif %}
+      </span>
+    </span>
+    <span class="docrow-date">{{ item.version.created_at[:16]|replace("T", " ") }}</span>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
