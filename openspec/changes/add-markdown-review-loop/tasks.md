@@ -4,32 +4,32 @@ onward, and no group leaves it in a non-running state.
 
 ## 1. Scaffold and server runtime
 
-- [ ] 1.1 Create the `uv` project: `pyproject.toml` with the `mdreview` package under
+- [x] 1.1 Create the `uv` project: `pyproject.toml` with the `mdreview` package under
   `src/`, the `mdreview` console script entrypoint, and pinned runtime dependencies
   (`fastapi`, `uvicorn`, `jinja2`, `markdown-it-py`, `typer`, `httpx`)
-- [ ] 1.2 Add dev tooling: `ruff` lint and format config, `pytest` config, and a
+- [x] 1.2 Add dev tooling: `ruff` lint and format config, `pytest` config, and a
   `mise.toml` exposing `serve`, `test`, `lint`, and `fmt` tasks
-- [ ] 1.3 Implement `config.py`: data directory and database path resolution, default
+- [x] 1.3 Implement `config.py`: data directory and database path resolution, default
   port 7391, and environment-variable overrides for both
-- [ ] 1.4 Implement `db.py`: connection factory setting WAL journal mode and foreign-key
+- [x] 1.4 Implement `db.py`: connection factory setting WAL journal mode and foreign-key
   enforcement, plus the `PRAGMA user_version` migration runner
-- [ ] 1.5 Implement `migrations.py` with step 1 creating `documents`, `versions`,
+- [x] 1.5 Implement `migrations.py` with step 1 creating `documents`, `versions`,
   `comments`, and the two indexes exactly as specified in design D9
-- [ ] 1.6 Implement `models.py`: dataclasses for document, version, and comment, and
+- [x] 1.6 Implement `models.py`: dataclasses for document, version, and comment, and
   enums for review status and comment state
-- [ ] 1.7 Implement `server.py`: FastAPI app factory, lifespan hook that opens the
+- [x] 1.7 Implement `server.py`: FastAPI app factory, lifespan hook that opens the
   database and migrates on startup, and a `/healthz` route reporting app and schema
   version
-- [ ] 1.8 Enforce loopback-only binding, rejecting any non-loopback host at startup
-- [ ] 1.9 Implement `cli.py` with the Typer app and the `serve` command, supporting
+- [x] 1.8 Enforce loopback-only binding, rejecting any non-loopback host at startup
+- [x] 1.9 Implement `cli.py` with the Typer app and the `serve` command, supporting
   foreground and detached modes
-- [ ] 1.10 Implement `client.py`: HTTP client wrapper with lazy autostart — on
+- [x] 1.10 Implement `client.py`: HTTP client wrapper with lazy autostart — on
   connection refused, spawn a detached server, poll `/healthz` until ready, retry once,
   and exit 5 if it cannot be started
-- [ ] 1.11 Tests: migration runner is idempotent and incremental; pragmas are applied;
+- [x] 1.11 Tests: migration runner is idempotent and incremental; pragmas are applied;
   `/healthz` responds; non-loopback host is refused; autostart spawns and reuses a
   server
-- [ ] 1.12 Verify by hand: `mise run serve`, confirm `/healthz`, confirm the database is
+- [x] 1.12 Verify by hand: `mise run serve`, confirm `/healthz`, confirm the database is
   created at the expected path with `user_version` set
 
 ## 2. Document submission and immutable versions

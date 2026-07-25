@@ -1,0 +1,27 @@
+[tools]
+python = "3.12"
+uv = "latest"
+
+[tasks.install]
+description = "Sync the virtualenv with the lockfile"
+run = "uv sync"
+
+[tasks.serve]
+description = "Run the review server in the foreground"
+run = "uv run mdreview serve --foreground"
+
+[tasks.test]
+description = "Run the test suite"
+run = "uv run pytest"
+
+[tasks.lint]
+description = "Lint the codebase"
+run = "uv run ruff check ."
+
+[tasks.fmt]
+description = "Format the codebase"
+run = "uv run ruff format ."
+
+[tasks.check]
+description = "Lint, format-check and test"
+run = ["uv run ruff check .", "uv run ruff format --check .", "uv run pytest"]
