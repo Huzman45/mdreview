@@ -18,6 +18,7 @@ from urllib.parse import urlparse
 
 from markdown_it import MarkdownIt
 from markdown_it.token import Token
+from mdit_py_plugins.tasklists import tasklists_plugin
 
 #: Schemes a link may use. Anything else is stripped, so a document cannot
 #: smuggle in a ``javascript:`` payload. markdown-it already rejects these by
@@ -105,6 +106,9 @@ def build_parser() -> MarkdownIt:
     """
     md = MarkdownIt("default", {"html": False, "linkify": False, "typographer": False})
     md.validateLink = _validate_link
+    # Task lists render as real checkboxes. They stay disabled: the agent owns
+    # the file, so nothing on the page may edit a document about to be revised.
+    md.use(tasklists_plugin, enabled=False)
     for name in WRAPPED_ANCHORS:
         original = md.renderer.rules.get(name) or getattr(md.renderer, name)
         md.renderer.rules[name] = _anchored(original)

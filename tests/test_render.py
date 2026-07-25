@@ -221,3 +221,66 @@ def test_is_within(start: int, end: int, expected: bool) -> None:
 
 def test_empty_document_has_no_blocks() -> None:
     assert blocks_of("") == ()
+
+
+# -- task lists -------------------------------------------------------------
+
+TASKS = "- [x] shipped\n- [ ] pending\n- plain bullet\n"
+
+
+def test_task_items_render_as_checkboxes() -> None:
+    html = render.render(TASKS).html
+    assert 'type="checkbox"' in html
+    assert 'checked="checked"' in html
+
+
+def test_no_literal_bracket_text_remains() -> None:
+    html = render.render(TASKS).html
+    assert "[x]" not in html
+    assert "[ ]" not in html
+
+
+def test_every_checkbox_is_disabled() -> None:
+    """The agent owns the file; the page must not be able to edit it."""
+    import re
+
+    html = render.render(TASKS).html
+    inputs = re.findall(r"<input[^>]*>", html)
+    assert len(inputs) == 2
+    assert all("disabled" in tag for tag in inputs)
+
+
+def test_unchecked_item_has_no_checked_attribute() -> None:
+    html = render.render("- [ ] pending\n").html
+    assert 'type="checkbox"' in html
+    assert "checked" not in html
+
+
+def test_task_list_items_keep_per_item_anchoring() -> None:
+    blocks = blocks_of(TASKS)
+    assert [b.kind for b in blocks] == ["list_item_open"] * 3
+    assert [(b.line_start, b.line_end) for b in blocks] == [(1, 1), (2, 2), (3, 3)]
+
+
+def test_task_list_anchor_class_is_composed_not_overwritten() -> None:
+    """The plugin sets task-list-item; anchoring must append, not replace."""
+    html = render.render("- [x] shipped\n").html
+    assert "task-list-item" in html
+    assert render.ANCHOR_CLASS in html
+
+
+def test_task_item_range_quotes_the_source_line() -> None:
+    blocks = blocks_of(TASKS)
+    quoted = render.quote_lines(TASKS, blocks[0].line_start, blocks[0].line_end)
+    assert quoted == "- [x] shipped"
+
+
+def test_plain_bullets_are_unaffected() -> None:
+    html = render.render("- one\n- two\n").html
+    assert "checkbox" not in html
+
+
+def test_markup_in_a_task_item_is_still_escaped() -> None:
+    html = render.render("- [ ] <script>alert(1)</script>\n").html
+    assert "<script>" not in html
+    assert "&lt;script&gt;" in html
