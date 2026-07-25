@@ -39,6 +39,13 @@ TOP_LEVEL_ANCHORS = frozenset(
     }
 )
 
+#: Fence info strings that mean "render this as a diagram" rather than as code.
+#: The fence source is always preserved in the output, so a diagram that fails to
+#: parse degrades to visible text instead of hiding content.
+DIAGRAM_LANGUAGES = frozenset({"mermaid"})
+
+DIAGRAM_CLASS = "mdr-diagram"
+
 #: Fences render as ``<pre><code>``, and markdown-it puts token attributes on
 #: the inner ``<code>``. Anchoring there would leave the surrounding padding of
 #: the ``<pre>`` unclickable, which is a poor target for what is often the most
@@ -70,6 +77,8 @@ class Block:
 class Rendered:
     html: str
     blocks: tuple[Block, ...]
+    has_diagrams: bool = False
+    """True when the page must load the diagram library, which is megabytes."""
 
 
 def _validate_link(url: str) -> bool:
@@ -80,8 +89,25 @@ def _validate_link(url: str) -> bool:
     return scheme in ALLOWED_SCHEMES
 
 
+def diagram_language(token: Token) -> str | None:
+    """The diagram language of a fence, or None if it is ordinary code."""
+    if token.type != "fence":
+        return None
+    info = (token.info or "").strip().split(maxsplit=1)
+    if not info:
+        return None
+    language = info[0].lower()
+    return language if language in DIAGRAM_LANGUAGES else None
+
+
 def _anchored(original: Callable[..., str]) -> Callable[..., str]:
-    """Wrap a render rule's output in an anchored ``div``."""
+    """Wrap a render rule's output in an anchored ``div``.
+
+    Diagram fences additionally carry a marker the browser uses to upgrade them.
+    The rendered source stays inside the wrapper, so a diagram that fails to
+    parse — or a browser that never loads the library — shows the source rather
+    than an empty space.
+    """
 
     def rule(tokens: list[Token], idx: int, options: object, env: object) -> str:
         inner = original(tokens, idx, options, env)
@@ -89,9 +115,17 @@ def _anchored(original: Callable[..., str]) -> Callable[..., str]:
         if token.map is None:
             return inner
         start, end = token.map
+
+        classes = ANCHOR_CLASS
+        marker = ""
+        language = diagram_language(token)
+        if language is not None:
+            classes = f"{ANCHOR_CLASS} {DIAGRAM_CLASS}"
+            marker = f' data-diagram="{language}"'
+
         return (
-            f'<div class="{ANCHOR_CLASS}" data-line-start="{start + 1}"'
-            f' data-line-end="{end}">{inner}</div>'
+            f'<div class="{classes}" data-line-start="{start + 1}"'
+            f' data-line-end="{end}"{marker}>{inner}</div>'
         )
 
     return rule
@@ -134,6 +168,7 @@ def render(content: str, *, parser: MarkdownIt | None = None) -> Rendered:
     tokens = md.parse(content)
 
     blocks: list[Block] = []
+    has_diagrams = any(diagram_language(token) is not None for token in tokens)
 
     for token in tokens:
         if not _is_anchor(token):
@@ -155,7 +190,7 @@ def render(content: str, *, parser: MarkdownIt | None = None) -> Rendered:
         )
 
     html = md.renderer.render(tokens, md.options, {})
-    return Rendered(html=html, blocks=tuple(blocks))
+    return Rendered(html=html, blocks=tuple(blocks), has_diagrams=has_diagrams)
 
 
 def line_count(content: str) -> int:

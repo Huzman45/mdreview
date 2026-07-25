@@ -284,3 +284,62 @@ def test_markup_in_a_task_item_is_still_escaped() -> None:
     html = render.render("- [ ] <script>alert(1)</script>\n").html
     assert "<script>" not in html
     assert "&lt;script&gt;" in html
+
+
+# -- diagrams ---------------------------------------------------------------
+
+DIAGRAM = "# Plan\n\n```mermaid\ngraph TD;\n  A-->B;\n```\n"
+
+
+def test_a_mermaid_fence_is_marked_as_a_diagram() -> None:
+    html = render.render(DIAGRAM).html
+    assert render.DIAGRAM_CLASS in html
+    assert 'data-diagram="mermaid"' in html
+
+
+def test_a_diagram_keeps_its_source_in_the_page() -> None:
+    """A failed render must fall back to source, so the source must survive."""
+    html = render.render(DIAGRAM).html
+    assert "graph TD;" in html
+    assert "A--&gt;B;" in html
+
+
+def test_a_diagram_is_still_an_addressable_block() -> None:
+    result = render.render(DIAGRAM)
+    fence = next(b for b in result.blocks if b.kind == "fence")
+    assert (fence.line_start, fence.line_end) == (3, 6)
+    quoted = render.quote_lines(DIAGRAM, fence.line_start, fence.line_end)
+    assert quoted.startswith("```mermaid")
+
+
+def test_ordinary_code_fences_are_not_diagrams() -> None:
+    html = render.render("```python\nx = 1\n```\n").html
+    assert render.DIAGRAM_CLASS not in html
+    assert "data-diagram" not in html
+
+
+def test_untagged_fences_are_not_diagrams() -> None:
+    html = render.render("```\nplain\n```\n").html
+    assert "data-diagram" not in html
+
+
+def test_has_diagrams_is_reported() -> None:
+    assert render.render(DIAGRAM).has_diagrams is True
+    assert render.render("```python\nx = 1\n```\n").has_diagrams is False
+    assert render.render("# Just prose\n").has_diagrams is False
+
+
+def test_diagram_language_detection_is_case_insensitive() -> None:
+    html = render.render("```MERMAID\ngraph TD;\n```\n").html
+    assert 'data-diagram="mermaid"' in html
+
+
+def test_diagram_info_string_with_extra_words() -> None:
+    html = render.render("```mermaid title=x\ngraph TD;\n```\n").html
+    assert 'data-diagram="mermaid"' in html
+
+
+def test_markup_in_diagram_source_is_escaped() -> None:
+    html = render.render('```mermaid\nA["<script>alert(1)</script>"]\n```\n').html
+    assert "<script>alert(1)</script>" not in html
+    assert "&lt;script&gt;" in html

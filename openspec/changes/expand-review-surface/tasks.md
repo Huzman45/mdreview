@@ -15,19 +15,19 @@ every group.
 
 ## 2. Diagram rendering
 
-- [ ] 2.1 Vendor `mermaid.min.js` into static assets
-- [ ] 2.2 Mark fences whose info string is a supported diagram language with a diagram
+- [x] 2.1 Vendor `mermaid.min.js` into static assets
+- [x] 2.2 Mark fences whose info string is a supported diagram language with a diagram
   class in `render.py`, preserving the fence source and the anchored line range
-- [ ] 2.3 Add client-side upgrading: detect diagram blocks, inject the library only if
+- [x] 2.3 Add client-side upgrading: detect diagram blocks, inject the library only if
   at least one is present, and render with `securityLevel: 'strict'`
-- [ ] 2.4 Fall back to showing the source with a "could not render" note when parsing
+- [x] 2.4 Fall back to showing the source with a "could not render" note when parsing
   fails or the library is unavailable
-- [ ] 2.5 Pass the active colour scheme to the diagram theme, and re-render on theme
+- [x] 2.5 Pass the active colour scheme to the diagram theme, and re-render on theme
   change
-- [ ] 2.6 Tests: a `mermaid` fence is marked and keeps its line range; other fences are
+- [x] 2.6 Tests: a `mermaid` fence is marked and keeps its line range; other fences are
   untouched; the library is referenced only on pages containing a diagram; the fence
   source survives in the markup
-- [ ] 2.7 Verify in a browser that a real diagram renders, and that a malformed one
+- [x] 2.7 Verify in a browser that a real diagram renders, and that a malformed one
   falls back to source
 
 ## 3. Theme preference
