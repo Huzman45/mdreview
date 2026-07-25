@@ -12,8 +12,9 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import UTC, datetime
 
+from . import render
 from .db import transaction
-from .models import Document, ReviewStatus, Version
+from .models import Comment, CommentState, Document, ReviewStatus, Version
 
 _SLUG_STRIP = re.compile(r"[^a-z0-9]+")
 _HEADING = re.compile(r"^\s{0,3}#\s+(.+?)\s*$", re.MULTILINE)
@@ -202,6 +203,10 @@ def submit(
             " VALUES (?, ?, ?, ?, ?, ?)",
             (document.id, n, content, sha, ReviewStatus.PENDING.value, now()),
         )
+        # Feedback on a superseded version is history, not an outstanding
+        # request. Anchors are left untouched so the comment stays readable
+        # against the text it was written on.
+        outdate_open_comments(conn, document.id)
         row = conn.execute(
             "SELECT * FROM versions WHERE id = ?", (cursor.lastrowid,)
         ).fetchone()
@@ -251,3 +256,130 @@ def list_documents(
             continue
         summaries.append(DocumentSummary(document=Document.from_row(row), version=version))
     return summaries
+
+
+# -- comments ---------------------------------------------------------------
+
+
+def next_ref(conn: sqlite3.Connection, version_id: int) -> str:
+    """Allocate the next ``Cn`` reference for a version.
+
+    Numbering restarts per version and counts every comment ever made on it,
+    including resolved ones, so a reference is never reused for different
+    feedback. The UNIQUE constraint on (version_id, ref) is the backstop.
+    """
+    count = conn.execute(
+        "SELECT COUNT(*) FROM comments WHERE version_id = ?", (version_id,)
+    ).fetchone()[0]
+    return f"C{count + 1}"
+
+
+def create_comment(
+    conn: sqlite3.Connection,
+    *,
+    version: Version,
+    line_start: int,
+    line_end: int,
+    body: str,
+) -> Comment:
+    """Attach a note to a line range of a version.
+
+    The source text is captured now rather than resolved on read, so the
+    comment stays meaningful once the version is superseded.
+    """
+    if not body.strip():
+        raise StoreError("refusing to store an empty comment")
+    if not render.is_within(version.content, line_start, line_end):
+        raise StoreError(
+            f"line range {line_start}-{line_end} is outside version "
+            f"{version.n}, which has {render.line_count(version.content)} lines"
+        )
+
+    quoted = render.quote_lines(version.content, line_start, line_end)
+    with transaction(conn):
+        ref = next_ref(conn, version.id)
+        cursor = conn.execute(
+            "INSERT INTO comments"
+            " (version_id, ref, line_start, line_end, quoted, body, state, created_at)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                version.id,
+                ref,
+                line_start,
+                line_end,
+                quoted,
+                body.strip(),
+                CommentState.OPEN.value,
+                now(),
+            ),
+        )
+        row = conn.execute(
+            "SELECT * FROM comments WHERE id = ?", (cursor.lastrowid,)
+        ).fetchone()
+    return Comment.from_row(row)
+
+
+def list_comments(
+    conn: sqlite3.Connection,
+    version_id: int,
+    *,
+    states: tuple[CommentState, ...] | None = None,
+) -> list[Comment]:
+    query = "SELECT * FROM comments WHERE version_id = ?"
+    params: list[object] = [version_id]
+    if states:
+        placeholders = ", ".join("?" for _ in states)
+        query += f" AND state IN ({placeholders})"
+        params.extend(state.value for state in states)
+    query += " ORDER BY id"
+    return [Comment.from_row(row) for row in conn.execute(query, params)]
+
+
+def open_comments(conn: sqlite3.Connection, version_id: int) -> list[Comment]:
+    return list_comments(conn, version_id, states=(CommentState.OPEN,))
+
+
+def get_comment(conn: sqlite3.Connection, version_id: int, ref: str) -> Comment | None:
+    row = conn.execute(
+        "SELECT * FROM comments WHERE version_id = ? AND ref = ?", (version_id, ref)
+    ).fetchone()
+    return Comment.from_row(row) if row else None
+
+
+def resolve_comment(conn: sqlite3.Connection, version_id: int, ref: str) -> Comment:
+    """Mark a comment resolved. Idempotent for one already resolved."""
+    comment = get_comment(conn, version_id, ref)
+    if comment is None:
+        raise NotFound(f"no comment {ref!r} on this version")
+    if comment.state is CommentState.OPEN:
+        conn.execute(
+            "UPDATE comments SET state = ? WHERE id = ?",
+            (CommentState.RESOLVED.value, comment.id),
+        )
+        comment = get_comment(conn, version_id, ref)
+        assert comment is not None
+    return comment
+
+
+def outdate_open_comments(conn: sqlite3.Connection, document_id: int) -> int:
+    """Supersede every open comment on a document. Returns how many changed.
+
+    Comments are marked rather than relocated. Re-anchoring feedback onto
+    shifted line numbers is the single largest source of complexity in tools
+    like this, and its failure mode — a comment silently attached to the wrong
+    passage — is worse than honestly marking it outdated.
+    """
+    cursor = conn.execute(
+        "UPDATE comments SET state = ?"
+        " WHERE state = ?"
+        "   AND version_id IN (SELECT id FROM versions WHERE document_id = ?)",
+        (CommentState.OUTDATED.value, CommentState.OPEN.value, document_id),
+    )
+    return cursor.rowcount
+
+
+def count_unresolved(conn: sqlite3.Connection, version_id: int) -> int:
+    return conn.execute(
+        "SELECT COUNT(*) FROM comments WHERE version_id = ? AND state = ?",
+        (version_id, CommentState.OPEN.value),
+    ).fetchone()[0]

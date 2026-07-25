@@ -11,7 +11,7 @@ from pydantic import BaseModel, Field
 
 from . import db, store
 from .config import Settings
-from .models import ReviewStatus
+from .models import CommentState, ReviewStatus
 from .store import NotFound, StoreError
 
 router = APIRouter(prefix="/api")
@@ -164,3 +164,97 @@ def _require(conn: sqlite3.Connection, slug: str) -> store.Document:
         return store.require_document(conn, slug)
     except NotFound as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+# -- comments ---------------------------------------------------------------
+
+
+class CommentRequest(BaseModel):
+    line_start: int = Field(ge=1)
+    line_end: int = Field(ge=1)
+    body: str
+
+
+class CommentResponse(BaseModel):
+    ref: str
+    line_start: int
+    line_end: int
+    quoted: str
+    body: str
+    state: CommentState
+    created_at: str
+
+    @classmethod
+    def of(cls, comment: store.Comment) -> CommentResponse:
+        return cls(
+            ref=comment.ref,
+            line_start=comment.line_start,
+            line_end=comment.line_end,
+            quoted=comment.quoted,
+            body=comment.body,
+            state=comment.state,
+            created_at=comment.created_at,
+        )
+
+
+def _version(conn: sqlite3.Connection, slug: str, n: int) -> store.Version:
+    document = _require(conn, slug)
+    try:
+        return store.require_version(conn, document.id, n)
+    except NotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+
+@router.post(
+    "/documents/{slug}/versions/{n}/comments",
+    response_model=CommentResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def add_comment(slug: str, n: int, payload: CommentRequest, conn: Conn) -> CommentResponse:
+    version = _version(conn, slug, n)
+    try:
+        comment = store.create_comment(
+            conn,
+            version=version,
+            line_start=payload.line_start,
+            line_end=payload.line_end,
+            body=payload.body,
+        )
+    except StoreError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return CommentResponse.of(comment)
+
+
+@router.get("/documents/{slug}/versions/{n}/comments", response_model=list[CommentResponse])
+def get_comments(
+    slug: str, n: int, conn: Conn, state: CommentState | None = None
+) -> list[CommentResponse]:
+    version = _version(conn, slug, n)
+    states = (state,) if state else None
+    return [
+        CommentResponse.of(comment)
+        for comment in store.list_comments(conn, version.id, states=states)
+    ]
+
+
+class ResolveResponse(BaseModel):
+    resolved: list[str]
+    unresolved_remaining: int
+
+
+class ResolveRequest(BaseModel):
+    refs: list[str]
+
+
+@router.post("/documents/{slug}/versions/{n}/resolve", response_model=ResolveResponse)
+def resolve_comments(slug: str, n: int, payload: ResolveRequest, conn: Conn) -> ResolveResponse:
+    version = _version(conn, slug, n)
+    try:
+        for ref in payload.refs:
+            store.resolve_comment(conn, version.id, ref)
+    except NotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+    return ResolveResponse(
+        resolved=payload.refs,
+        unresolved_remaining=store.count_unresolved(conn, version.id),
+    )

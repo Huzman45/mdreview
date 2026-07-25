@@ -10,6 +10,7 @@
 {% endblock %}
 
 {% block content %}
+<div class="layout">
 <article class="document">
   <h1 class="doc-title">{{ document.title }}</h1>
 
@@ -31,4 +32,7 @@
     {{ body|safe }}
   </div>
 </article>
+
+{% include "_sidebar.html" %}
+</div>
 {% endblock %}
