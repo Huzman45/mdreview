@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ document.title }} — mdreview{% endblock %}
+{% block title %}{{ document.title }} (source) — mdreview{% endblock %}
 
 {% block topbar %}
   <div class="meta">
@@ -16,15 +16,21 @@
 
   {% include "_viewnav.html" %}
 
+  <p class="raw-hint">
+    Click a line to select it, shift-click another to extend the range.
+  </p>
+
   {#
-    `body` is the only unescaped value in this project. It is safe because
-    render.py parses with html=False, so any markup embedded in the untrusted
-    document is emitted as text, and link targets are filtered to an
-    allow-list. Never pass unrendered user input through this filter.
+    Every line is escaped by autoescaping. This view deliberately shows
+    markdown as literal source, so nothing here is ever rendered as markup.
   #}
-  <div class="rendered" id="rendered">
-    {{ body|safe }}
-  </div>
+  <ol class="rawlines" id="rawlines">
+    {% for line in lines %}
+    <li class="rawline mdr-line" data-line="{{ loop.index }}">
+      <span class="rawline-no" aria-hidden="true">{{ loop.index }}</span><span class="rawline-text">{{ line }}</span>
+    </li>
+    {% endfor %}
+  </ol>
 </article>
 
 {% include "_sidebar.html" %}

@@ -101,10 +101,49 @@ def _document_page(
             "version": version,
             "versions": versions,
             "is_latest": n == max(versions),
+            "previous_version": _previous_version(versions, n),
+            "view": "rendered",
             "body": rendered.html,
             "blocks": rendered.blocks,
             "has_diagrams": rendered.has_diagrams,
             "error": error,
+            **_sidebar_context(conn, document, version),
+        },
+    )
+
+
+def _previous_version(versions: list[int], n: int) -> int | None:
+    """The version immediately before ``n``, or None if it is the first."""
+    earlier = [v for v in versions if v < n]
+    return max(earlier) if earlier else None
+
+
+@router.get("/d/{slug}/v/{n}/raw", response_class=HTMLResponse)
+def document_raw(slug: str, n: int, request: Request, conn: Conn) -> HTMLResponse:
+    """The version as numbered source lines.
+
+    This is what makes feedback possible on text no rendered block isolates —
+    one line of a fenced block, or one line of a wrapped paragraph. It posts to
+    the same comment endpoint with the same line-range anchor, so a comment made
+    here is indistinguishable from one made on a rendered block.
+    """
+    document = _require_document(conn, slug)
+    version = _require_version(conn, document, n)
+    versions = [v.n for v in store.list_versions(conn, document.id)]
+
+    return templates.TemplateResponse(
+        request,
+        "raw.html",
+        {
+            "document": document,
+            "version": version,
+            "versions": versions,
+            "is_latest": n == max(versions),
+            "previous_version": _previous_version(versions, n),
+            "view": "raw",
+            "lines": version.content.splitlines(),
+            "has_diagrams": False,
+            "error": None,
             **_sidebar_context(conn, document, version),
         },
     )

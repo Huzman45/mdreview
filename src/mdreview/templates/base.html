@@ -13,6 +13,7 @@
   <script src="/static/htmx.min.js" defer></script>
   <script src="/static/app.js" defer></script>
   {% if has_diagrams %}<script src="/static/diagrams.js" defer></script>{% endif %}
+  {% if view == "raw" %}<script src="/static/rawlines.js" defer></script>{% endif %}
 </head>
 <body>
   <header class="topbar">

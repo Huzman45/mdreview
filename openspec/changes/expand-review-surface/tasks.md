@@ -45,19 +45,19 @@ every group.
 
 ## 4. Raw line view
 
-- [ ] 4.1 Add a `GET /d/{slug}/v/{n}/raw` route rendering numbered source lines, 404 for
+- [x] 4.1 Add a `GET /d/{slug}/v/{n}/raw` route rendering numbered source lines, 404 for
   unknown slug or version
-- [ ] 4.2 Reuse the existing sidebar, comment form and lifecycle gate, so a decided or
+- [x] 4.2 Reuse the existing sidebar, comment form and lifecycle gate, so a decided or
   superseded version offers no form
-- [ ] 4.3 Add line selection: click for one line, shift-click to extend to a contiguous
+- [x] 4.3 Add line selection: click for one line, shift-click to extend to a contiguous
   range, feeding the existing `line_start`/`line_end` fields
-- [ ] 4.4 Cross-link the rendered and raw views for the same version
-- [ ] 4.5 Tests: every line is listed with its 1-based number; markdown appears as
+- [x] 4.4 Cross-link the rendered and raw views for the same version
+- [x] 4.5 Tests: every line is listed with its 1-based number; markdown appears as
   literal source; a comment on one line inside a fence stores that line and quotes
   exactly it; a range comment quotes exactly those lines; a raw comment is structurally
   identical to a block comment; out-of-bounds is rejected; no form on decided or
   superseded versions
-- [ ] 4.6 Verify by hand that a single line inside a fenced block can be commented on
+- [x] 4.6 Verify by hand that a single line inside a fenced block can be commented on
 
 ## 5. Version diff view
 

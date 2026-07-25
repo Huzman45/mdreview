@@ -1,0 +1,21 @@
+{# Navigation between the views of one version, and between versions. #}
+<nav class="viewnav">
+  {% if versions|length > 1 %}
+    <span class="viewnav-group">
+      {% for n in versions %}
+        <a class="{% if n == version.n %}current{% endif %}" href="/d/{{ document.slug }}/v/{{ n }}">v{{ n }}</a>
+      {% endfor %}
+    </span>
+  {% endif %}
+
+  <span class="viewnav-group">
+    <a class="{% if view == 'rendered' %}current{% endif %}"
+       href="/d/{{ document.slug }}/v/{{ version.n }}">Rendered</a>
+    <a class="{% if view == 'raw' %}current{% endif %}"
+       href="/d/{{ document.slug }}/v/{{ version.n }}/raw">Source</a>
+    {% if previous_version %}
+      <a class="{% if view == 'diff' %}current{% endif %}"
+         href="/d/{{ document.slug }}/diff/{{ previous_version }}/{{ version.n }}">Changes</a>
+    {% endif %}
+  </span>
+</nav>
