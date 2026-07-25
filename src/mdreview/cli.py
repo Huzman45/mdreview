@@ -2,17 +2,19 @@
 
 from __future__ import annotations
 
+import json
 import os
 import webbrowser
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 import typer
 
-from . import __version__, config
+from . import __version__, config, report
 from .client import ApiError, ApiUnreachable, Client
 from .config import Settings
-from .exits import Exit
+from .exits import Exit, exit_for
+from .models import ReviewStatus
 
 app = typer.Typer(
     name="mdreview",
@@ -133,8 +135,6 @@ def submit(
             raise _fail(exc.detail, Exit.ERROR) from exc
 
     if as_json:
-        import json
-
         typer.echo(json.dumps(result, indent=2))
     else:
         note = " (unchanged, reusing existing round)" if result["reused"] else ""
@@ -162,3 +162,118 @@ def open_document(
             raise _fail(exc.detail, Exit.ERROR) from exc
     webbrowser.open(document["url"])
     typer.echo(document["url"])
+
+
+def _state(client: Client, slug: str) -> dict[str, Any]:
+    try:
+        return client.get(f"/api/documents/{slug}/state")
+    except ApiUnreachable as exc:
+        raise _fail(str(exc), Exit.UNREACHABLE) from exc
+    except ApiError as exc:
+        raise _fail(exc.detail, Exit.ERROR) from exc
+
+
+def _warn_on_version_skew(client: Client) -> None:
+    """A server left running across an upgrade will serve the old code."""
+    running = client.server_version()
+    if running is not None and running != __version__:
+        typer.secho(
+            f"warning: server is running {running} but this CLI is {__version__}; "
+            f"restart it to pick up changes",
+            fg=typer.colors.YELLOW,
+            err=True,
+        )
+
+
+@app.command()
+def review(
+    slug: Annotated[str, typer.Argument(help="Document slug.")],
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON.")] = False,
+    host: HostOption = None,
+    port: PortOption = None,
+) -> None:
+    """Read the review outcome. The exit code carries the result.
+
+    0 approved, 2 changes requested, 3 not yet decided, 4 cancelled,
+    5 the API could not be reached.
+    """
+    settings = _settings(host, port)
+    with Client(settings) as client:
+        state = _state(client, slug)
+        _warn_on_version_skew(client)
+
+    status = ReviewStatus(state["status"])
+    if as_json:
+        typer.echo(json.dumps(state, indent=2))
+    else:
+        typer.echo(report.render_state(state))
+
+    raise typer.Exit(exit_for(status))
+
+
+@app.command()
+def status(
+    slug: Annotated[str, typer.Argument(help="Document slug.")],
+    host: HostOption = None,
+    port: PortOption = None,
+) -> None:
+    """Print one line describing where a document stands."""
+    settings = _settings(host, port)
+    with Client(settings) as client:
+        state = _state(client, slug)
+    typer.echo(
+        report.header(
+            ReviewStatus(state["status"]),
+            state["version"],
+            len(state.get("unresolved") or []),
+        )
+    )
+
+
+@app.command()
+def resolve(
+    slug: Annotated[str, typer.Argument(help="Document slug.")],
+    refs: Annotated[list[str], typer.Argument(help="Comment references, e.g. C1 C2.")],
+    host: HostOption = None,
+    port: PortOption = None,
+) -> None:
+    """Mark comments as addressed."""
+    settings = _settings(host, port)
+    with Client(settings) as client:
+        state = _state(client, slug)
+        try:
+            result = client.post(
+                f"/api/documents/{slug}/versions/{state['version']}/resolve",
+                json={"refs": refs},
+            )
+        except ApiUnreachable as exc:
+            raise _fail(str(exc), Exit.UNREACHABLE) from exc
+        except ApiError as exc:
+            raise _fail(exc.detail, Exit.ERROR) from exc
+
+    typer.echo(
+        f"resolved {', '.join(result['resolved'])} "
+        f"({result['unresolved_remaining']} unresolved remaining)"
+    )
+
+
+@app.command("list")
+def list_documents(
+    pending: Annotated[
+        bool, typer.Option("--pending", help="Only documents awaiting a decision.")
+    ] = False,
+    as_json: Annotated[bool, typer.Option("--json", help="Emit JSON.")] = False,
+    host: HostOption = None,
+    port: PortOption = None,
+) -> None:
+    """List submitted documents."""
+    settings = _settings(host, port)
+    with Client(settings) as client:
+        try:
+            items = client.get("/api/documents", params={"pending": pending})
+        except ApiUnreachable as exc:
+            raise _fail(str(exc), Exit.UNREACHABLE) from exc
+        except ApiError as exc:
+            raise _fail(exc.detail, Exit.ERROR) from exc
+
+    typer.echo(json.dumps(items, indent=2) if as_json else report.render_list(items))

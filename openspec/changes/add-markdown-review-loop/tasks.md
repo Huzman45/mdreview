@@ -122,23 +122,23 @@ onward, and no group leaves it in a non-running state.
 
 ## 6. Agent-facing CLI
 
-- [ ] 6.1 Implement the `review` command: fetch document state and map status to exit
+- [x] 6.1 Implement the `review` command: fetch document state and map status to exit
   codes 0, 2, 3, and 4 per design D6
-- [ ] 6.2 Implement the LLM-shaped renderer: header line with status, version, and
+- [x] 6.2 Implement the LLM-shaped renderer: header line with status, version, and
   unresolved count, then each comment as reference, line range, quoted source, and body
-- [ ] 6.3 Make the pending case state explicitly that no decision has been recorded
-- [ ] 6.4 Add `--json` to `review`, preserving the exit code
-- [ ] 6.5 Implement the `resolve` command taking one or more references and reporting the
+- [x] 6.3 Make the pending case state explicitly that no decision has been recorded
+- [x] 6.4 Add `--json` to `review`, preserving the exit code
+- [x] 6.5 Implement the `resolve` command taking one or more references and reporting the
   remaining unresolved count
-- [ ] 6.6 Implement `list --pending` and `status`
-- [ ] 6.7 Ensure exit code 5 is reserved for an unreachable API and never overlaps a
+- [x] 6.6 Implement `list --pending` and `status`
+- [x] 6.7 Ensure exit code 5 is reserved for an unreachable API and never overlaps a
   review outcome
-- [ ] 6.8 Add a `--version` flag, and warn when the running server's version differs
+- [x] 6.8 Add a `--version` flag, and warn when the running server's version differs
   from the CLI's
-- [ ] 6.9 Tests: exit code per status; JSON output preserves exit codes; header line
+- [x] 6.9 Tests: exit code per status; JSON output preserves exit codes; header line
   contents; quoted source present per comment; resolve reports remaining count; exit 5
   when the API cannot be started
-- [ ] 6.10 Verify by hand: run the full loop — submit, comment, request changes, `review`
+- [x] 6.10 Verify by hand: run the full loop — submit, comment, request changes, `review`
   and confirm exit 2, resolve, resubmit, approve, `review` and confirm exit 0
 
 ## 7. Agent skill and documentation
