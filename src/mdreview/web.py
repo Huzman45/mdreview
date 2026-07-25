@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from . import render, store
+from . import diff, render, store
 from .api import get_conn, get_settings
 from .config import Settings
 from .models import ReviewStatus
@@ -108,6 +108,34 @@ def _document_page(
             "has_diagrams": rendered.has_diagrams,
             "error": error,
             **_sidebar_context(conn, document, version),
+        },
+    )
+
+
+@router.get("/d/{slug}/diff/{a}/{b}", response_class=HTMLResponse)
+def document_diff(slug: str, a: int, b: int, request: Request, conn: Conn) -> HTMLResponse:
+    """Line differences between two versions.
+
+    Read-only: a comparison describes a relationship between two versions and
+    belongs to neither, so there is no version a comment could anchor to.
+    """
+    document = _require_document(conn, slug)
+    old = _require_version(conn, document, a)
+    new = _require_version(conn, document, b)
+    versions = [v.n for v in store.list_versions(conn, document.id)]
+
+    return templates.TemplateResponse(
+        request,
+        "diff.html",
+        {
+            "document": document,
+            "old_version": old,
+            "version": new,
+            "versions": versions,
+            "previous_version": _previous_version(versions, new.n),
+            "view": "diff",
+            "diff": diff.compare(old.content, new.content),
+            "has_diagrams": False,
         },
     )
 
