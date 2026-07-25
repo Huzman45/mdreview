@@ -5,7 +5,7 @@
   <div class="meta">
     <span class="status status-{{ version.status.value }}">{{ version.status.value|replace("_", " ") }}</span>
     <span class="version">v{{ version.n }}{% if not is_latest %} (superseded){% endif %}</span>
-    {% if document.project_path %}<span class="project" title="{{ document.project_path }}">{{ document.project_path }}</span>{% endif %}
+    {% if document.project_path %}<span class="project" title="{{ document.project_path }}">{{ document.project_path | display_path }}</span>{% endif %}
   </div>
 {% endblock %}
 

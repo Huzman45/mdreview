@@ -82,6 +82,14 @@
     return r.start === r.end ? "Line " + r.start : "Lines " + r.start + "–" + r.end;
   }
 
+  // On a phone the sidebar sits below the document, so a selected block leaves
+  // the comment box off-screen. Bring it into view instead of focusing it,
+  // because focusing alone would scroll abruptly and open the keyboard over
+  // the text being commented on.
+  function isStackedLayout() {
+    return window.matchMedia("(max-width: 62rem)").matches;
+  }
+
   document.addEventListener("mdr:selected", function (event) {
     var f = form();
     if (!f.start) return;
@@ -91,7 +99,19 @@
     f.body.disabled = false;
     f.submit.disabled = false;
     f.label.textContent = label(r);
-    f.body.focus();
+    // The idle placeholder tells you to pick a block; once one is picked it
+    // would be instructing you to do what you just did.
+    if (f.body.dataset.idlePlaceholder === undefined) {
+      f.body.dataset.idlePlaceholder = f.body.placeholder;
+    }
+    f.body.placeholder = "Write your comment…";
+
+    if (isStackedLayout()) {
+      var panel = document.getElementById("comment-panel");
+      if (panel) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    } else {
+      f.body.focus();
+    }
   });
 
   document.addEventListener("mdr:deselected", function () {
@@ -102,6 +122,9 @@
     f.body.disabled = true;
     f.submit.disabled = true;
     f.label.textContent = "No block selected";
+    if (f.body.dataset.idlePlaceholder !== undefined) {
+      f.body.placeholder = f.body.dataset.idlePlaceholder;
+    }
   });
 
   // Submit with cmd/ctrl+enter.

@@ -21,6 +21,25 @@ STATIC_DIR = Path(__file__).parent / "static"
 
 templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 
+
+def display_path(value: str | None) -> str:
+    """Abbreviate the home directory so a project path fits the chrome.
+
+    Truncating with an ellipsis instead would hide the tail, which is the only
+    informative part of an absolute path.
+    """
+    if not value:
+        return ""
+    home = str(Path.home())
+    if value == home:
+        return "~"
+    if value.startswith(home + "/"):
+        return "~" + value[len(home) :]
+    return value
+
+
+templates.env.filters["display_path"] = display_path
+
 router = APIRouter()
 
 Conn = Annotated[sqlite3.Connection, Depends(get_conn)]

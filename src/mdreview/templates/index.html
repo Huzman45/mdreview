@@ -13,7 +13,7 @@
       <strong>{{ item.document.title }}</strong>
       <span class="docrow-sub">
         {{ item.document.slug }} &middot; v{{ item.version.n }}
-        {% if item.document.project_path %}&middot; {{ item.document.project_path }}{% endif %}
+        {% if item.document.project_path %}&middot; {{ item.document.project_path | display_path }}{% endif %}
       </span>
     </span>
     <span class="docrow-date">{{ item.version.created_at[:16]|replace("T", " ") }}</span>
