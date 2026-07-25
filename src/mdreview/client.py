@@ -36,7 +36,10 @@ class Client:
     def __init__(self, settings: Settings, *, autostart: bool | None = None) -> None:
         self._settings = settings
         self._autostart = config.autostart_enabled() if autostart is None else autostart
-        self._http = httpx.Client(base_url=settings.base_url, timeout=10.0)
+        # This client only talks to an explicitly selected local interface.
+        # Honouring HTTP(S)_PROXY here sends private-LAN readiness checks through
+        # a corporate proxy, where they time out even though the server is up.
+        self._http = httpx.Client(base_url=settings.base_url, timeout=10.0, trust_env=False)
 
     def __enter__(self) -> Client:
         return self
@@ -67,18 +70,21 @@ class Client:
         log = config.log_path()
         log.parent.mkdir(parents=True, exist_ok=True)
         handle = log.open("a")
+        command = [
+            sys.executable,
+            "-m",
+            "mdreview",
+            "serve",
+            "--host",
+            self._settings.host,
+            "--port",
+            str(self._settings.port),
+            "--foreground",
+        ]
+        if self._settings.allow_lan:
+            command.append("--allow-lan")
         subprocess.Popen(
-            [
-                sys.executable,
-                "-m",
-                "mdreview",
-                "serve",
-                "--host",
-                self._settings.host,
-                "--port",
-                str(self._settings.port),
-                "--foreground",
-            ],
+            command,
             stdout=handle,
             stderr=handle,
             stdin=subprocess.DEVNULL,

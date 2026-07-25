@@ -29,6 +29,21 @@ def test_submit_creates_a_document(api: TestClient) -> None:
     assert payload["url"].endswith("/d/plan")
 
 
+def test_submit_url_uses_the_selected_lan_address(tmp_path) -> None:
+    settings = Settings(
+        host="10.31.41.35",
+        port=7391,
+        database=tmp_path / "db.sqlite",
+        allow_lan=True,
+    )
+    with TestClient(create_app(settings)) as client:
+        payload = client.post(
+            "/api/documents",
+            json={"content": "# Plan\n", "source_name": "plan"},
+        ).json()
+    assert payload["url"] == "http://10.31.41.35:7391/d/plan"
+
+
 def test_submit_rejects_empty_content(api: TestClient) -> None:
     response = api.post("/api/documents", json={"content": "   ", "source_name": "plan"})
     assert response.status_code == 422

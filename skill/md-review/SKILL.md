@@ -117,4 +117,5 @@ mdreview open <slug>         # reopen the review page
 - Each submission is an immutable version. Comments on an older version are
   marked outdated rather than moved, so nothing you resubmit can corrupt
   feedback the user already wrote.
-- Everything is local, on loopback, single user.
+- Everything is local and single user. It uses loopback by default; an explicit
+  private-LAN opt-in can make review pages reachable from a phone.

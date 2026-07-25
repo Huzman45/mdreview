@@ -18,6 +18,7 @@ ENV_HOST = "MDREVIEW_HOST"
 ENV_PORT = "MDREVIEW_PORT"
 ENV_DATA_DIR = "MDREVIEW_DATA_DIR"
 ENV_AUTOSTART = "MDREVIEW_AUTOSTART"
+ENV_ALLOW_LAN = "MDREVIEW_ALLOW_LAN"
 
 
 def data_dir() -> Path:
@@ -73,6 +74,15 @@ def autostart_enabled() -> bool:
     }
 
 
+def allow_lan_enabled() -> bool:
+    """Whether an unauthenticated private-LAN bind was explicitly allowed."""
+    return os.environ.get(ENV_ALLOW_LAN, "0").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+
+
 def is_loopback(host: str) -> bool:
     """True if ``host`` can only be reached from this machine.
 
@@ -88,11 +98,32 @@ def is_loopback(host: str) -> bool:
         return False
 
 
-def require_loopback(host: str) -> str:
-    if not is_loopback(host):
+def require_safe_bind(host: str, *, allow_lan: bool = False) -> str:
+    """Accept loopback, or one explicit private address with an opt-in.
+
+    Wildcard addresses remain forbidden even with the opt-in: binding to one
+    concrete interface is enough for phone access without also exposing the
+    service on Wi-Fi, VPN, and every future interface.
+    """
+    if is_loopback(host):
+        return host
+    if not allow_lan:
         raise ValueError(
-            f"refusing to bind to {host!r}: mdreview has no authentication and "
-            f"must only listen on a loopback address"
+            f"refusing to bind to {host!r}: mdreview has no authentication; "
+            f"pass --allow-lan to expose it on a private network"
+        )
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError as exc:
+        raise ValueError(
+            "LAN binding requires a concrete private IP address, not a hostname"
+        ) from exc
+    if address.is_unspecified:
+        raise ValueError(f"refusing wildcard address {host!r}; choose one private LAN address")
+    if not address.is_private:
+        raise ValueError(
+            f"refusing non-private address {host!r}; --allow-lan only permits "
+            f"private network addresses"
         )
     return host
 
@@ -102,6 +133,7 @@ class Settings:
     host: str
     port: int
     database: Path
+    allow_lan: bool = False
 
     @classmethod
     def load(
@@ -110,11 +142,16 @@ class Settings:
         host: str | None = None,
         port: int | None = None,
         database: Path | None = None,
+        allow_lan: bool = False,
     ) -> Settings:
+        allow_lan = allow_lan or allow_lan_enabled()
         return cls(
-            host=require_loopback(host if host is not None else default_host()),
+            host=require_safe_bind(
+                host if host is not None else default_host(), allow_lan=allow_lan
+            ),
             port=port if port is not None else default_port(),
             database=database if database is not None else db_path(),
+            allow_lan=allow_lan,
         )
 
     @property

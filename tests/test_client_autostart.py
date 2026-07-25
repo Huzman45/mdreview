@@ -12,6 +12,7 @@ import os
 import signal
 import time
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
 
@@ -82,3 +83,27 @@ def test_disabled_autostart_reports_unreachable(settings: Settings) -> None:
         pytest.raises(ApiUnreachable, match="no server reachable"),
     ):
         client.ensure_up()
+
+
+def test_lan_autostart_propagates_the_explicit_opt_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    settings = Settings(
+        host="10.31.41.35",
+        port=7391,
+        database=tmp_path / "db.sqlite",
+        allow_lan=True,
+    )
+    command: list[str] = []
+
+    def capture(argv: list[str], **_: object) -> None:
+        command.extend(argv)
+
+    monkeypatch.setattr("mdreview.client.subprocess.Popen", capture)
+    monkeypatch.setattr("mdreview.client.config.log_path", lambda: tmp_path / "server.log")
+
+    with Client(settings) as client:
+        client._spawn()
+
+    assert command[-1] == "--allow-lan"
+    assert "10.31.41.35" in command
