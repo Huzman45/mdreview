@@ -1,0 +1,95 @@
+schema: spec-driven
+
+context: |
+  # mdreview
+
+  A localhost-only tool that turns a markdown file into a reviewable web page so a
+  human can approve it or leave block-level comments, and an AI coding agent can
+  read the outcome back via a CLI. It exists to remove the friction of reviewing
+  agent-authored plan files (PLAN.md and friends) in a text editor with no way to
+  attach feedback to specific passages.
+
+  ## Tech stack
+
+  - Python 3.12, dependencies and venv managed by `uv`
+  - FastAPI + uvicorn (single worker, bound to 127.0.0.1 only, no auth)
+  - SQLite in WAL mode at `~/.local/share/mdreview/db.sqlite`
+  - Schema migrations via `PRAGMA user_version` and an ordered list of SQL steps
+    (no Alembic)
+  - Jinja2 + htmx for the UI. No bundler, no build step, no SPA framework
+  - `markdown-it-py` for markdown rendering AND source-position anchoring
+  - Typer for the CLI
+  - `mise` tasks wrap common commands
+
+  ## Architecture decisions
+
+  These were settled before implementation. Treat them as given.
+
+  1. **Immutable versions.** Every `submit` snapshots the full document content and
+     its SHA-256 as a new version. Versions are never mutated. A review round IS a
+     version, so review status lives on the version row rather than in a separate
+     reviews table.
+
+  2. **Comment anchors cannot drift.** Comments anchor to
+     `(version_id, line_start, line_end)`. Because a version's bytes are immutable,
+     an anchor is always valid. When a revision is submitted, prior comments are
+     marked `outdated` rather than relocated onto new line numbers. There is no
+     fuzzy anchor-repair logic anywhere in this codebase.
+
+  3. **Block-level anchoring via token.map.** The UI renders markdown, not raw
+     source. `markdown-it-py` exposes `token.map == [start_line, end_line]` for
+     every block token, which yields separate anchors for headings, each paragraph,
+     each individual list item, and each fenced code block. Rendered blocks carry
+     `data-line-start` / `data-line-end` attributes and comments are attached to
+     those ranges. Anchors are stored as line ranges, so a raw line-numbered view
+     could be added later with no schema change.
+
+  4. **No blocking, human hands off.** `submit` returns immediately and opens a
+     browser tab. The agent surfaces the URL and stops. The human reviews, decides,
+     and nudges the agent in chat. The agent's first action on resume is
+     `mdreview review <doc>`. There is deliberately no long-poll endpoint, no
+     `wait` command, no timeout handling, and no websockets.
+
+  5. **Exit codes are the agent-facing API.** `mdreview review` exits 0 approved,
+     2 changes_requested, 3 still pending, 4 cancelled. Exit code 3 is what stops
+     an agent from proceeding when nudged before a decision was actually recorded.
+
+  6. **Output is LLM-shaped.** Comment output includes the quoted source text
+     inline alongside stable per-version comment refs (C1, C2, ...) so the agent
+     never has to re-read the file to understand feedback.
+
+  7. **Lazy autostart, no daemon.** The CLI spawns a detached server when it gets
+     a connection refused. No launchd job, no login item. Because nothing holds a
+     long-lived connection, a server restart mid-review is harmless.
+
+  8. **CLI + skill, no MCP.** The agent integration is the CLI plus an
+     `md-review` skill. Do not add an MCP server.
+
+  ## Deliberate non-goals
+
+  Authentication, multi-user support, cloud sync, threaded comment discussions,
+  rich-text editing, realtime collaborative cursors, and comment anchor relocation
+  across versions. This is a single-user tool on loopback. Every one of these is
+  out of scope.
+
+  ## Conventions
+
+  - Conventional commits
+  - Work is split into stacked PRs managed with Graphite (`gt`)
+  - Tracer-bullet ordering: the tool must run end to end from the first
+    implementation PR onward; no PR leaves the tool in a non-running state
+  - `ruff` for lint and format, `pytest` for tests
+  - Type hints on all public functions
+
+rules:
+  proposal:
+    - Keep the proposal focused on the review loop; do not restate the tech stack
+    - Always include a "Non-goals" section
+  design:
+    - Reference the numbered architecture decisions from project context rather
+      than re-deriving them
+    - Include the SQLite schema DDL and the CLI surface with exit codes
+  tasks:
+    - Group tasks so each group maps to exactly one stacked PR
+    - Order groups tracer-bullet style so the tool runs after every PR
+    - Break tasks into chunks of max 2 hours
