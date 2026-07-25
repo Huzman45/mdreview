@@ -258,3 +258,63 @@ def resolve_comments(slug: str, n: int, payload: ResolveRequest, conn: Conn) -> 
         resolved=payload.refs,
         unresolved_remaining=store.count_unresolved(conn, version.id),
     )
+
+
+# -- decisions --------------------------------------------------------------
+
+
+class DecisionRequest(BaseModel):
+    status: ReviewStatus
+    note: str | None = None
+
+
+class StateResponse(BaseModel):
+    slug: str
+    title: str
+    project_path: str | None
+    version: int
+    status: ReviewStatus
+    decision_note: str | None
+    decided_at: str | None
+    url: str
+    unresolved: list[CommentResponse]
+
+
+@router.post("/documents/{slug}/versions/{n}/decision", response_model=VersionSummary)
+def decide(slug: str, n: int, payload: DecisionRequest, conn: Conn) -> VersionSummary:
+    version = _version(conn, slug, n)
+    try:
+        updated = store.decide(conn, version=version, status=payload.status, note=payload.note)
+    except store.Conflict as exc:
+        raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
+    except StoreError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+    return VersionSummary(
+        n=updated.n,
+        status=updated.status,
+        content_sha=updated.content_sha,
+        decision_note=updated.decision_note,
+        decided_at=updated.decided_at,
+        created_at=updated.created_at,
+    )
+
+
+@router.get("/documents/{slug}/state", response_model=StateResponse)
+def get_state(slug: str, conn: Conn, settings: Config) -> StateResponse:
+    try:
+        state = store.document_state(conn, slug)
+    except NotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+
+    return StateResponse(
+        slug=state.document.slug,
+        title=state.document.title,
+        project_path=state.document.project_path,
+        version=state.version.n,
+        status=state.status,
+        decision_note=state.version.decision_note,
+        decided_at=state.version.decided_at,
+        url=review_url(settings, state.document.slug),
+        unresolved=[CommentResponse.of(c) for c in state.unresolved],
+    )

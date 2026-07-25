@@ -353,3 +353,15 @@ li.mdr-block { list-style-position: outside; }
   background: #fff8c5;
   box-shadow: -0.5rem 0 0 #fff8c5, 0.5rem 0 0 #fff8c5;
 }
+
+/* -- decisions ---------------------------------------------------------- */
+
+.decision-buttons { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+
+.decision-buttons button { margin-top: 0; flex: 1; }
+.decision-buttons .approve { background: var(--ok); border-color: var(--ok); color: #fff; }
+.decision-buttons .request { background: var(--surface); border-color: var(--danger); color: var(--danger); }
+
+.decided { display: flex; flex-direction: column; gap: 0.4rem; align-items: flex-start; }
+.decided-at { font-size: 0.72rem; color: var(--muted); }
+.decision-note { margin: 0; font-size: 0.85rem; white-space: pre-wrap; }

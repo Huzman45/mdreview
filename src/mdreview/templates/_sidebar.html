@@ -1,4 +1,6 @@
 <aside class="sidebar" id="sidebar">
+  {% include "_decision.html" %}
+
   {% if can_edit %}
   <form class="comment-panel" id="comment-panel"
         hx-post="/d/{{ slug }}/v/{{ version.n }}/comments"

@@ -101,23 +101,23 @@ onward, and no group leaves it in a non-running state.
 
 ## 5. Review decisions
 
-- [ ] 5.1 Implement decision recording in `store.py`: set status, decision note, and
+- [x] 5.1 Implement decision recording in `store.py`: set status, decision note, and
   decision timestamp on a version
-- [ ] 5.2 Reject a decision on an already-decided version as a conflict
-- [ ] 5.3 Enforce that requesting changes requires either at least one open comment or a
+- [x] 5.2 Reject a decision on an already-decided version as a conflict
+- [x] 5.3 Enforce that requesting changes requires either at least one open comment or a
   non-empty summary note
-- [ ] 5.4 Implement the document state query returning latest version, status, and
+- [x] 5.4 Implement the document state query returning latest version, status, and
   unresolved comments with references, ranges, quoted source, and bodies
-- [ ] 5.5 Add `POST /api/documents/{slug}/versions/{n}/decision`
-- [ ] 5.6 Add Approve and Request changes controls to the document page, with the
+- [x] 5.5 Add `POST /api/documents/{slug}/versions/{n}/decision`
+- [x] 5.6 Add Approve and Request changes controls to the document page, with the
   summary note field, and reflect the recorded decision after submission
-- [ ] 5.7 Build the index page listing documents, distinguishing pending from decided,
+- [x] 5.7 Build the index page listing documents, distinguishing pending from decided,
   showing title, project path, and version, each linking to its review page
-- [ ] 5.8 Tests: approve sets status and timestamp; request-changes with comments
+- [x] 5.8 Tests: approve sets status and timestamp; request-changes with comments
   succeeds; request-changes with neither comments nor note is rejected; approval with no
   comments succeeds; second decision conflicts; index separates pending from decided;
   pending filter; state query for unknown slug is not found
-- [ ] 5.9 Verify by hand: approve one document and request changes on another, then
+- [x] 5.9 Verify by hand: approve one document and request changes on another, then
   confirm the index reflects both
 
 ## 6. Agent-facing CLI

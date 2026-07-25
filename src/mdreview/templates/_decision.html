@@ -1,0 +1,28 @@
+<div class="decision-panel" id="decision-panel">
+  {% if version.status.value == "pending" and is_latest %}
+    <div class="panel-head">
+      <span class="selection-label">Decision</span>
+    </div>
+    <form hx-post="/d/{{ slug }}/v/{{ version.n }}/decision"
+          hx-target="#sidebar" hx-swap="outerHTML">
+      <textarea name="note" rows="2" placeholder="Optional summary note…"></textarea>
+      {% if decision_error %}<p class="form-error">{{ decision_error }}</p>{% endif %}
+      <div class="decision-buttons">
+        <button type="submit" name="status" value="approved" class="approve">Approve</button>
+        <button type="submit" name="status" value="changes_requested" class="request">
+          Request changes
+        </button>
+      </div>
+    </form>
+  {% elif version.status.value != "pending" %}
+    <div class="decided">
+      <span class="status status-{{ version.status.value }}">
+        {{ version.status.value|replace("_", " ") }}
+      </span>
+      {% if version.decided_at %}<span class="decided-at">{{ version.decided_at[:16]|replace("T", " ") }}</span>{% endif %}
+      {% if version.decision_note %}<p class="decision-note">{{ version.decision_note }}</p>{% endif %}
+    </div>
+  {% else %}
+    <p class="comments-empty">This version has been superseded.</p>
+  {% endif %}
+</div>
