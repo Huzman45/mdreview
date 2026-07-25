@@ -839,3 +839,54 @@ li.mdr-block {
     scroll-behavior: auto !important;
   }
 }
+
+/* -- task lists --------------------------------------------------------- */
+
+.rendered .contains-task-list {
+  list-style: none;
+  padding-left: 0.25rem;
+}
+
+.rendered li.task-list-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.55rem;
+}
+
+.rendered .task-list-item-checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: 0 0 auto;
+  width: 1rem;
+  height: 1rem;
+  margin: 0;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+  position: relative;
+  top: 0.18rem;
+  /* Read-only by design: the agent owns the file. */
+  cursor: default;
+}
+
+.rendered .task-list-item-checkbox:checked {
+  background: var(--ok);
+  border-color: var(--ok);
+}
+
+.rendered .task-list-item-checkbox:checked::after {
+  content: "";
+  position: absolute;
+  left: 0.28rem;
+  top: 0.05rem;
+  width: 0.24rem;
+  height: 0.5rem;
+  border: solid var(--on-filled);
+  border-width: 0 2px 2px 0;
+  transform: rotate(42deg);
+}
+
+/* A completed item is context, not something to act on. */
+.rendered li.task-list-item:has(.task-list-item-checkbox:checked) {
+  color: var(--muted);
+}

@@ -3,13 +3,13 @@ every group.
 
 ## 1. Task list checkboxes
 
-- [ ] 1.1 Add the `mdit-py-plugins` dependency and enable the `tasklists` plugin in
+- [x] 1.1 Add the `mdit-py-plugins` dependency and enable the `tasklists` plugin in
   `build_parser`, with checkboxes disabled
-- [ ] 1.2 Confirm the plugin composes with block anchoring: `list_item_open` keeps its
+- [x] 1.2 Confirm the plugin composes with block anchoring: `list_item_open` keeps its
   `token.map`, and the existing class is preserved rather than overwritten
-- [ ] 1.3 Style checkboxes so ticked and unticked items are distinguishable, and dim the
+- [x] 1.3 Style checkboxes so ticked and unticked items are distinguishable, and dim the
   text of completed items
-- [ ] 1.4 Tests: `- [x]` and `- [ ]` render as checked and unchecked inputs; no literal
+- [x] 1.4 Tests: `- [x]` and `- [ ]` render as checked and unchecked inputs; no literal
   `[x]` remains; inputs are disabled; per-bullet anchoring still yields one block per
   item with correct line ranges
 
