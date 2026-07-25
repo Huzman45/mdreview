@@ -23,5 +23,5 @@
   stable across restarts
 - [x] 1.10 Document the token, rotation, and the explicit absence of TLS in the README,
   including that the token does not protect against a network-level observer
-- [ ] 1.11 Verify by hand: the tokenised URL loads on a phone, a token-less URL from the
+- [x] 1.11 Verify by hand: the tokenised URL loads on a phone, a token-less URL from the
   same device is refused, and the agent CLI over loopback is unaffected

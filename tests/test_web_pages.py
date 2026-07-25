@@ -174,3 +174,13 @@ def test_stylesheet_defines_dark_tokens_once(api: TestClient) -> None:
     assert css.count("--surface-sunken: #1c212a") == 1
     assert ':root[data-theme="dark"]' in css
     assert "prefers-color-scheme: dark" not in css
+
+
+def test_task_items_are_not_flex_containers(api: TestClient) -> None:
+    """Flex makes every inline child its own flex item, so an inline <code>
+    span inside a task item fragments the text into separate wrapped pieces."""
+    css = api.get("/static/app.css").text
+    block = css[css.index("li.task-list-item") :]
+    block = block[: block.index("}")]
+    assert "display: block" in block
+    assert "flex" not in block

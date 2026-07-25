@@ -74,7 +74,7 @@ survive a restart, and MUST be replaceable so that access can be revoked.
 The CLI SHALL report when the server is listening outside loopback, because anyone who
 can reach the selected address and hold the token can read and mutate review state.
 
-#### Scenario: Starting on LAN reports the tokenised URL
+#### Scenario: Starting on LAN prints a warning
 - **WHEN** the server starts successfully on a private address
 - **THEN** stderr states that reviews are exposed on the network
 - **AND** it prints the full URL including the token

@@ -186,3 +186,80 @@ def test_a_retried_submit_does_not_discard_review_work(live: Harness) -> None:
     page = live.page("/d/plan")
     assert "half-written thought" in page
     assert "comment-outdated" not in page
+
+
+FENCED_PLAN = """# Cutover
+
+Run this during the freeze window.
+
+```sql
+BEGIN;
+DELETE FROM ledger WHERE id > 0;
+COMMIT;
+```
+"""
+
+FENCED_REVISED = """# Cutover
+
+Run this during the freeze window.
+
+```sql
+BEGIN;
+DELETE FROM ledger WHERE tenant_id = ? AND id > 0;
+COMMIT;
+```
+"""
+
+
+def test_a_review_driven_from_the_source_and_diff_views(live: Harness) -> None:
+    """The loop using the views added for line-precise feedback.
+
+    The comment targets one line inside a fenced block, which the rendered view
+    cannot isolate, and the revision is checked through the diff rather than by
+    re-reading the document.
+    """
+    plan = live.workdir / "CUTOVER.md"
+    plan.write_text(FENCED_PLAN)
+
+    assert live.cli("submit", "CUTOVER.md", "--no-open").returncode == Exit.OK
+
+    # The source view lists every line individually.
+    raw = live.page("/d/cutover/v/1/raw")
+    assert 'data-line="7"' in raw
+    assert "DELETE FROM ledger WHERE id &gt; 0;" in raw
+
+    # Comment on one line inside the fence — impossible from the rendered view.
+    live.browser_post(
+        "/d/cutover/v/1/comments",
+        {"line_start": "7", "line_end": "7", "body": "scope this to one tenant"},
+    )
+    live.browser_post("/d/cutover/v/1/decision", {"status": "changes_requested", "note": ""})
+
+    # The agent gets exactly that line quoted back.
+    review = live.cli("review", "cutover")
+    assert review.returncode == Exit.CHANGES_REQUESTED
+    assert "[C1] L7" in review.stdout
+    assert "  > DELETE FROM ledger WHERE id > 0;" in review.stdout
+
+    # Revise and resubmit.
+    assert live.cli("resolve", "cutover", "C1").returncode == Exit.OK
+    plan.write_text(FENCED_REVISED)
+    assert (
+        live.cli("submit", "CUTOVER.md", "--slug", "cutover", "--no-open").returncode == Exit.OK
+    )
+
+    # The agent resolved it before resubmitting, so it stays resolved rather
+    # than being swept to outdated along with anything left open.
+    assert "comment-resolved" in live.page("/d/cutover/v/1")
+
+    # The diff shows precisely what changed, without re-reading the document.
+    diff = live.page("/d/cutover/diff/1/2")
+    assert "diff-added" in diff
+    assert "diff-removed" in diff
+    assert "tenant_id" in diff
+
+    # Approve, and the agent proceeds.
+    live.browser_post("/d/cutover/v/2/decision", {"status": "approved", "note": "good"})
+    final = live.cli("review", "cutover")
+    assert final.returncode == Exit.OK
+    assert "STATUS: approved" in final.stdout

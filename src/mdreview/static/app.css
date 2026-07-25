@@ -849,24 +849,26 @@ li.mdr-block {
   padding-left: 0.25rem;
 }
 
+/* Deliberately not a flex container. Flex turns every inline child into its
+   own flex item, so an inline <code> span inside a task item breaks the text
+   into separately-wrapped fragments. Keeping the checkbox inline leaves one
+   normal inline formatting context. */
 .rendered li.task-list-item {
-  display: flex;
-  align-items: baseline;
-  gap: 0.55rem;
+  display: block;
 }
 
 .rendered .task-list-item-checkbox {
   appearance: none;
   -webkit-appearance: none;
-  flex: 0 0 auto;
+  display: inline-block;
+  vertical-align: -0.15em;
   width: 1rem;
   height: 1rem;
-  margin: 0;
+  margin: 0 0.45rem 0 0;
   border: 1.5px solid var(--border-strong);
   border-radius: 4px;
   background: var(--surface);
   position: relative;
-  top: 0.18rem;
   /* Read-only by design: the agent owns the file. */
   cursor: default;
 }

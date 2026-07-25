@@ -76,7 +76,9 @@ never has to install or manage a background service.
 - **THEN** the command fails with a message naming the port and the log file location
 
 ### Requirement: Health endpoint
-The service SHALL expose an unauthenticated health endpoint used to detect readiness.
+The service SHALL expose a health endpoint used to detect readiness. It requires no
+credential over loopback; on a LAN-bound server it is subject to the token check in
+`private-lan-access` like every other route.
 
 #### Scenario: Health check reports readiness
 - **WHEN** a client requests the health endpoint on a started server

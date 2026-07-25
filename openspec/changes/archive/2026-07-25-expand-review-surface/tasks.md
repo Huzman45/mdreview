@@ -78,9 +78,9 @@ every group.
 
 - [x] 6.1 Move shared top bar, theme control and view links into the base template so
   the four page types cannot drift
-- [ ] 6.2 End-to-end test: submit, comment from the raw view on a line inside a fence,
+- [x] 6.2 End-to-end test: submit, comment from the raw view on a line inside a fence,
   request changes, revise, resubmit, inspect the diff, approve
 - [x] 6.3 Update the README with the new views, the theme control, checkbox and diagram
   support, and the vendored asset
-- [ ] 6.4 Full suite, lint, format, and a browser pass at desktop and phone width in
+- [x] 6.4 Full suite, lint, format, and a browser pass at desktop and phone width in
   both colour schemes
