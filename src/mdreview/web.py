@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-from . import diff, render, store
+from . import diff, prototype, render, store
 from .api import get_conn, get_settings
 from .config import Settings
 from .models import ReviewStatus
@@ -139,9 +139,14 @@ def _document_page(
     versions = [v.n for v in store.list_versions(conn, document.id)]
     rendered = render.render(version.content)
 
+    # PROTOTYPE — swaps only the rendering; all the data above is the real thing.
+    chosen = prototype.resolve(request.query_params.get("variant"))
+    template = f"proto_{chosen.lower()}.html" if chosen else "document.html"
+    extra = prototype.context(chosen) if chosen else {}
+
     return templates.TemplateResponse(
         request,
-        "document.html",
+        template,
         {
             "document": document,
             "version": version,
@@ -154,6 +159,7 @@ def _document_page(
             "has_diagrams": rendered.has_diagrams,
             "error": error,
             **_sidebar_context(conn, document, version),
+            **extra,
         },
     )
 

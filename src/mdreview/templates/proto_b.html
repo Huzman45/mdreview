@@ -1,0 +1,92 @@
+{# PROTOTYPE B — Glass. No rail: floating dock + slide-over comment sheet. #}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ document.title }} — B</title>
+  <link rel="stylesheet" href="/static/proto-b.css">
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"></div>
+
+  <header class="glassbar">
+    <a class="gb-brand" href="/">mdreview</a>
+    <span class="gb-title">{{ document.title }}</span>
+    <span class="gb-spacer"></span>
+    <span class="pill pill-{{ version.status.value }}">{{ version.status.value|replace("_"," ") }}</span>
+    <span class="gb-v">v{{ version.n }}</span>
+  </header>
+
+  <main class="stage">
+    <article class="glass panel" id="rendered">{{ body|safe }}</article>
+  </main>
+
+  {# The whole right rail collapses into a dock; comments are a sheet. #}
+  <div class="dock glass">
+    <button class="dock-btn" id="sheet-open">
+      Comments
+      {% if unresolved %}<span class="dock-badge">{{ unresolved }}</span>{% endif %}
+    </button>
+    <span class="dock-div"></span>
+    {% if can_edit %}
+      <form class="dock-form" hx-post="/d/{{ document.slug }}/v/{{ version.n }}/decision"
+            hx-target="#sheet-body" hx-swap="innerHTML">
+        <input class="dock-note" name="note" placeholder="Note…">
+        <button class="dock-yes" name="status" value="approved">Approve</button>
+        <button class="dock-no" name="status" value="changes_requested">Request changes</button>
+      </form>
+    {% else %}
+      <span class="dock-done">{{ version.status.value|replace("_"," ") }}</span>
+    {% endif %}
+    <span class="dock-div"></span>
+    <a class="dock-link" href="/d/{{ document.slug }}/v/{{ version.n }}/raw?variant=B">source</a>
+    {% if previous_version %}<a class="dock-link" href="/d/{{ document.slug }}/diff/{{ previous_version }}/{{ version.n }}">changes</a>{% endif %}
+  </div>
+
+  <aside class="sheet glass" id="sheet" hidden>
+    <header class="sheet-head">
+      <strong>Comments</strong>
+      <button class="sheet-close" id="sheet-close" aria-label="Close">×</button>
+    </header>
+    <div class="sheet-body" id="sheet-body">
+      <div id="sidebar">
+        {% if can_edit %}
+        <form class="glass sub" id="comment-panel"
+              hx-post="/d/{{ document.slug }}/v/{{ version.n }}/comments"
+              hx-target="#sidebar" hx-swap="outerHTML">
+          <span class="sub-label" id="selection-label">Select a block</span>
+          <input type="hidden" name="line_start" id="line_start">
+          <input type="hidden" name="line_end" id="line_end">
+          <textarea name="body" id="comment-body" rows="3" placeholder="Comment…" disabled></textarea>
+          <button id="comment-submit" disabled>Comment</button>
+        </form>
+        {% endif %}
+        {% for c in comments %}
+        <div class="bubble bubble-{{ c.state.value }}" data-line-start="{{ c.line_start }}">
+          <div class="bubble-head"><b>{{ c.ref }}</b> · L{{ c.line_start }}{% if c.line_end != c.line_start %}–{{ c.line_end }}{% endif %} · {{ c.state.value }}</div>
+          <pre class="bubble-quote">{{ c.quoted }}</pre>
+          <p class="bubble-body">{{ c.body }}</p>
+        </div>
+        {% endfor %}
+        {% if not comments %}<p class="sheet-empty">Tap a block to comment.</p>{% endif %}
+      </div>
+    </div>
+  </aside>
+
+  <script src="/static/htmx.min.js"></script>
+  <script src="/static/app.js"></script>
+  <script>
+    var sheet = document.getElementById("sheet");
+    function show(open) {
+      sheet.hidden = !open;
+      document.body.classList.toggle("sheet-open", open);
+    }
+    document.getElementById("sheet-open").onclick = function () { show(true); };
+    document.getElementById("sheet-close").onclick = function () { show(false); };
+    // Selecting a block is the moment you want the sheet.
+    document.addEventListener("mdr:selected", function () { show(true); });
+  </script>
+  {% include "_proto_switcher.html" %}
+</body>
+</html>

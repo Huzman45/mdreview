@@ -1,0 +1,316 @@
+/* PROTOTYPE B — Glass.
+   Translucent layers over a gradient. No rail: a floating dock carries the
+   action, comments live in a slide-over sheet. */
+
+:root {
+  --bg: #0a0d14;
+  --text: #e8ecf4;
+  --muted: #9aa6bd;
+  --faint: #6d7994;
+  --edge: rgb(255 255 255 / 0.09);
+  --edge-strong: rgb(255 255 255 / 0.16);
+  --fill: rgb(255 255 255 / 0.045);
+  --fill-2: rgb(255 255 255 / 0.08);
+  --accent: #7aa2ff;
+  --ok: #4ad4a0;
+  --warn: #ffcc66;
+  --danger: #ff8080;
+  --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The gradient the glass has something to refract. */
+.aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 15% -10%, rgb(122 162 255 / 0.28), transparent 60%),
+    radial-gradient(50rem 35rem at 95% 10%, rgb(74 212 160 / 0.16), transparent 60%),
+    radial-gradient(45rem 40rem at 50% 110%, rgb(180 120 255 / 0.18), transparent 60%);
+}
+
+.glass {
+  background: var(--fill);
+  border: 1px solid var(--edge);
+  backdrop-filter: blur(22px) saturate(1.7);
+  -webkit-backdrop-filter: blur(22px) saturate(1.7);
+  box-shadow: 0 1px 0 rgb(255 255 255 / 0.06) inset, 0 20px 50px rgb(0 0 0 / 0.4);
+}
+
+/* -- top bar ------------------------------------------------------------ */
+
+.glassbar {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1.4rem;
+  background: rgb(10 13 20 / 0.55);
+  border-bottom: 1px solid var(--edge);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.gb-brand { font-weight: 700; color: var(--text); text-decoration: none; letter-spacing: -0.01em; }
+.gb-title {
+  font-size: 0.88rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.gb-spacer { flex: 1; }
+.gb-v { font-size: 0.78rem; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+.pill {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: capitalize;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.pill-pending { color: var(--warn); }
+.pill-approved { color: var(--ok); }
+.pill-changes_requested { color: var(--danger); }
+.pill-cancelled { color: var(--faint); }
+
+/* -- the document ------------------------------------------------------- */
+
+.stage {
+  position: relative;
+  z-index: 1;
+  padding: 2rem 1.4rem 11rem;
+  transition: padding-right 220ms ease;
+}
+
+/* The sheet must make room, not cover the words being reviewed. */
+@media (min-width: 62rem) {
+  body.sheet-open .stage { padding-right: 26rem; }
+}
+
+.panel {
+  max-width: 50rem;
+  margin: 0 auto;
+  padding: 2.2rem 2.4rem 2.8rem;
+  border-radius: 20px;
+  min-width: 0;
+}
+
+.panel h1 { font-size: 1.6rem; letter-spacing: -0.02em; margin: 0 0 0.9rem; line-height: 1.2; }
+.panel h2 { font-size: 1.15rem; margin: 2rem 0 0.6rem; letter-spacing: -0.01em; }
+.panel h3 { font-size: 1rem; margin: 1.5rem 0 0.45rem; }
+.panel p, .panel ul, .panel ol { margin: 0.85rem 0; }
+.panel a { color: var(--accent); }
+
+.panel code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--fill-2);
+  border: 1px solid var(--edge);
+  padding: 0.08em 0.32em;
+  border-radius: 5px;
+  overflow-wrap: anywhere;
+}
+.panel pre {
+  background: rgb(0 0 0 / 0.3);
+  border: 1px solid var(--edge);
+  padding: 0.9rem 1.1rem;
+  border-radius: 12px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+}
+.panel pre code { background: none; border: none; padding: 0; }
+
+.panel blockquote {
+  margin: 1.2rem 0;
+  padding: 0.5rem 1rem;
+  border-left: 2px solid var(--accent);
+  background: rgb(122 162 255 / 0.07);
+  border-radius: 0 10px 10px 0;
+  color: var(--muted);
+}
+
+.panel table { border-collapse: collapse; width: 100%; font-size: 0.85rem; display: block; overflow-x: auto; }
+.panel th, .panel td { border: 1px solid var(--edge); padding: 0.45rem 0.7rem; text-align: left; }
+.panel th { background: var(--fill-2); }
+
+.panel .contains-task-list { list-style: none; padding-left: 0; }
+.panel .task-list-item-checkbox { margin-right: 0.5rem; accent-color: var(--ok); }
+
+.mdr-block { cursor: pointer; border-radius: 8px; transition: background 110ms; }
+.mdr-block:hover { background: rgb(122 162 255 / 0.1); box-shadow: -0.6rem 0 0 rgb(122 162 255 / 0.1), 0.6rem 0 0 rgb(122 162 255 / 0.1); }
+.mdr-block.selected {
+  background: rgb(122 162 255 / 0.16);
+  box-shadow: -0.6rem 0 0 rgb(122 162 255 / 0.16), 0.6rem 0 0 rgb(122 162 255 / 0.16),
+              inset 2px 0 0 var(--accent);
+}
+
+/* -- floating dock ------------------------------------------------------ */
+
+.dock {
+  position: fixed;
+  z-index: 30;
+  bottom: 4.2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 999px;
+  max-width: calc(100vw - 2rem);
+}
+
+.dock-btn, .dock-yes, .dock-no, .dock-link, .dock-done {
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  cursor: pointer;
+  border: 1px solid var(--edge-strong);
+  background: var(--fill-2);
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.dock-btn { display: inline-flex; align-items: center; gap: 0.4rem; }
+.dock-badge {
+  background: var(--warn);
+  color: #241d10;
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.02rem 0.38rem;
+  border-radius: 999px;
+}
+.dock-div { width: 1px; height: 1.4rem; background: var(--edge); }
+.dock-form { display: flex; align-items: center; gap: 0.4rem; min-width: 0; }
+.dock-note {
+  font: inherit;
+  font-size: 0.8rem;
+  width: 9rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--edge-strong);
+  background: rgb(0 0 0 / 0.25);
+  color: var(--text);
+}
+.dock-yes { background: rgb(74 212 160 / 0.2); border-color: rgb(74 212 160 / 0.5); color: var(--ok); }
+.dock-no { background: rgb(255 128 128 / 0.14); border-color: rgb(255 128 128 / 0.45); color: var(--danger); }
+.dock-link { background: none; border-color: transparent; color: var(--muted); }
+.dock-done { background: none; border-color: transparent; color: var(--faint); text-transform: capitalize; }
+
+/* -- slide-over sheet --------------------------------------------------- */
+
+.sheet {
+  position: fixed;
+  z-index: 40;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: min(24rem, 92vw);
+  border-radius: 20px 0 0 20px;
+  border-right: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--edge);
+}
+.sheet-head strong { font-size: 0.9rem; }
+.sheet-close {
+  margin-left: auto;
+  font-size: 1.2rem;
+  line-height: 1;
+  background: none;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+}
+.sheet-body { padding: 1rem 1.1rem; overflow-y: auto; display: flex; flex-direction: column; gap: 0.8rem; }
+.sheet-empty { color: var(--faint); font-size: 0.85rem; margin: 0; }
+
+.sub {
+  border-radius: 14px;
+  padding: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.sub-label { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); font-weight: 700; }
+.sub textarea {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 10px;
+  border: 1px solid var(--edge-strong);
+  background: rgb(0 0 0 / 0.25);
+  color: var(--text);
+  resize: vertical;
+}
+.sub button {
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 650;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgb(122 162 255 / 0.5);
+  background: rgb(122 162 255 / 0.2);
+  color: var(--accent);
+  cursor: pointer;
+}
+.sub button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.bubble {
+  border: 1px solid var(--edge);
+  background: var(--fill);
+  border-radius: 14px;
+  padding: 0.7rem 0.8rem;
+}
+.bubble-resolved { opacity: 0.6; }
+.bubble-outdated { opacity: 0.45; }
+.bubble-head { font-size: 0.68rem; color: var(--faint); text-transform: uppercase; letter-spacing: 0.04em; }
+.bubble-head b { color: var(--text); }
+.bubble-quote {
+  margin: 0.35rem 0;
+  padding: 0.35rem 0.5rem;
+  background: rgb(0 0 0 / 0.3);
+  border-radius: 8px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 5rem;
+  overflow: auto;
+  color: var(--muted);
+}
+.bubble-body { margin: 0; font-size: 0.85rem; white-space: pre-wrap; }
+
+@media (max-width: 48rem) {
+  .panel { padding: 1.4rem 1.2rem 2rem; border-radius: 16px; }
+  .stage { padding: 1.2rem 0.8rem 10rem; }
+  .dock { flex-wrap: wrap; justify-content: center; border-radius: 18px; bottom: 4rem; }
+  .dock-note { width: 6.5rem; }
+  .gb-title { display: none; }
+}

@@ -37,3 +37,6 @@ htmlcov/
 
 # Screenshot output from scripts/shots.py
 .shots*/
+
+# PROTOTYPE screenshot output
+.proto-shots/

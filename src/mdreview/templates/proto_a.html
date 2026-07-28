@@ -1,0 +1,76 @@
+{# PROTOTYPE A — Editorial. Comments in the margin, not a rail. #}
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ document.title }} — A</title>
+  <link rel="stylesheet" href="/static/proto-a.css">
+</head>
+<body>
+  <header class="masthead">
+    <a class="masthead-brand" href="/">mdreview</a>
+    <span class="masthead-sep">/</span>
+    <span class="masthead-path">{{ document.project_path | display_path }}</span>
+    <span class="masthead-right">
+      <span class="rule rule-{{ version.status.value }}">{{ version.status.value|replace("_"," ") }}</span>
+    </span>
+  </header>
+
+  <article class="sheet">
+    <div class="colophon">
+      <span>Version {{ version.n }}{% if versions|length > 1 %} of {{ versions|length }}{% endif %}</span>
+      <span class="colophon-dot">·</span>
+      <span>{{ comments|length }} comment{{ 's' if comments|length != 1 }}</span>
+      <span class="colophon-links">
+        <a href="/d/{{ document.slug }}/v/{{ version.n }}/raw?variant=A">source</a>
+        {% if previous_version %}<a href="/d/{{ document.slug }}/diff/{{ previous_version }}/{{ version.n }}">changes</a>{% endif %}
+      </span>
+    </div>
+
+    {# Decision sits directly under the title: the page's one action. #}
+    {% if can_edit %}
+    <form class="verdict" hx-post="/d/{{ document.slug }}/v/{{ version.n }}/decision"
+          hx-target="#sidebar" hx-swap="outerHTML">
+      <input class="verdict-note" name="note" placeholder="Add a note, or just decide…">
+      <button name="status" value="approved" class="verdict-yes">Approve</button>
+      <button name="status" value="changes_requested" class="verdict-no">Request changes</button>
+    </form>
+    {% else %}
+    <p class="verdict verdict-done">
+      <span class="rule rule-{{ version.status.value }}">{{ version.status.value|replace("_"," ") }}</span>
+      {% if version.decision_note %}<em>{{ version.decision_note }}</em>{% endif %}
+    </p>
+    {% endif %}
+
+    <div class="prose-wrap">
+      <div class="prose" id="rendered">{{ body|safe }}</div>
+
+      {# Margin notes, keyed to the block they annotate. #}
+      <aside class="margin" id="sidebar">
+        {% for c in comments %}
+        <div class="note note-{{ c.state.value }}" data-line-start="{{ c.line_start }}">
+          <div class="note-head"><span class="note-ref">{{ c.ref }}</span> L{{ c.line_start }}{% if c.line_end != c.line_start %}–{{ c.line_end }}{% endif %}</div>
+          <p class="note-body">{{ c.body }}</p>
+        </div>
+        {% endfor %}
+        {% if can_edit %}
+        <form class="note note-new" id="comment-panel"
+              hx-post="/d/{{ document.slug }}/v/{{ version.n }}/comments"
+              hx-target="#sidebar" hx-swap="outerHTML">
+          <div class="note-head"><span id="selection-label">Select a block</span></div>
+          <input type="hidden" name="line_start" id="line_start">
+          <input type="hidden" name="line_end" id="line_end">
+          <textarea name="body" id="comment-body" rows="2" placeholder="Annotate…" disabled></textarea>
+          <button id="comment-submit" disabled>Add note</button>
+        </form>
+        {% endif %}
+      </aside>
+    </div>
+  </article>
+
+  <script src="/static/htmx.min.js"></script>
+  <script src="/static/app.js"></script>
+  {% include "_proto_switcher.html" %}
+</body>
+</html>

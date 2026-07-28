@@ -1,0 +1,103 @@
+{# PROTOTYPE C — Console. Outline left, text centre, comments as a bottom panel. #}
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ document.title }} — C</title>
+  <link rel="stylesheet" href="/static/proto-c.css">
+</head>
+<body>
+  <header class="bar">
+    <a class="bar-brand" href="/">mdreview</a>
+    <span class="bar-slug">{{ document.slug }}</span>
+    <span class="bar-at">@v{{ version.n }}</span>
+    <span class="bar-flex"></span>
+    <span class="tag tag-{{ version.status.value }}">{{ version.status.value }}</span>
+    {% if unresolved %}<span class="tag tag-open">{{ unresolved }} open</span>{% endif %}
+    <a class="bar-link" href="/d/{{ document.slug }}/v/{{ version.n }}/raw?variant=C">raw</a>
+    {% if previous_version %}<a class="bar-link" href="/d/{{ document.slug }}/diff/{{ previous_version }}/{{ version.n }}">diff</a>{% endif %}
+  </header>
+
+  <div class="shell">
+    {# Left rail: an outline built from the document's own headings. #}
+    <nav class="outline">
+      <div class="outline-head">Outline</div>
+      <ol class="outline-list" id="outline"></ol>
+      <div class="outline-head">Versions</div>
+      <ol class="outline-list">
+        {% for n in versions %}
+        <li><a class="{% if n == version.n %}on{% endif %}" href="/d/{{ document.slug }}/v/{{ n }}?variant=C">v{{ n }}</a></li>
+        {% endfor %}
+      </ol>
+    </nav>
+
+    <main class="doc">
+      <div class="doc-inner" id="rendered">{{ body|safe }}</div>
+    </main>
+  </div>
+
+  {# Comments as a console at the bottom, the way a build log or REPL sits. #}
+  <section class="console" id="sidebar">
+    <header class="console-bar">
+      <span class="console-tab on">COMMENTS <b>{{ comments|length }}</b></span>
+      {% if can_edit %}<span class="console-hint" id="selection-label">Select a block</span>{% endif %}
+      <span class="bar-flex"></span>
+      {% if can_edit %}
+      <form class="console-decide" hx-post="/d/{{ document.slug }}/v/{{ version.n }}/decision"
+            hx-target="#sidebar" hx-swap="outerHTML">
+        <input class="console-note" name="note" placeholder="note">
+        <button class="ok" name="status" value="approved">approve</button>
+        <button class="no" name="status" value="changes_requested">request changes</button>
+      </form>
+      {% else %}
+        <span class="console-hint">{{ version.status.value }}{% if version.decision_note %} — {{ version.decision_note }}{% endif %}</span>
+      {% endif %}
+    </header>
+
+    <div class="console-body">
+      {% if can_edit %}
+      <form class="row row-new" id="comment-panel"
+            hx-post="/d/{{ document.slug }}/v/{{ version.n }}/comments"
+            hx-target="#sidebar" hx-swap="outerHTML">
+        <input type="hidden" name="line_start" id="line_start">
+        <input type="hidden" name="line_end" id="line_end">
+        <textarea name="body" id="comment-body" rows="1" placeholder="comment on the selected block…" disabled></textarea>
+        <button id="comment-submit" disabled>send</button>
+      </form>
+      {% endif %}
+      {% for c in comments %}
+      <div class="row row-{{ c.state.value }}" data-line-start="{{ c.line_start }}">
+        <span class="row-ref">{{ c.ref }}</span>
+        <span class="row-loc">L{{ c.line_start }}{% if c.line_end != c.line_start %}-{{ c.line_end }}{% endif %}</span>
+        <span class="row-state">{{ c.state.value }}</span>
+        <span class="row-body">{{ c.body }}</span>
+      </div>
+      {% endfor %}
+      {% if not comments %}<p class="row-empty">no comments</p>{% endif %}
+    </div>
+  </section>
+
+  <script src="/static/htmx.min.js"></script>
+  <script src="/static/app.js"></script>
+  <script>
+    // Build the outline from the rendered headings.
+    (function () {
+      var list = document.getElementById("outline");
+      var seen = 0;
+      document.querySelectorAll("#rendered h1, #rendered h2, #rendered h3").forEach(function (h) {
+        if (!h.id) h.id = "h" + (++seen);
+        var li = document.createElement("li");
+        li.className = "lvl-" + h.tagName.toLowerCase();
+        var a = document.createElement("a");
+        a.href = "#" + h.id;
+        a.textContent = h.textContent;
+        li.appendChild(a);
+        list.appendChild(li);
+      });
+      if (!seen) list.innerHTML = '<li class="none">no headings</li>';
+    })();
+  </script>
+  {% include "_proto_switcher.html" %}
+</body>
+</html>
