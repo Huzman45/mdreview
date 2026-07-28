@@ -24,7 +24,8 @@ app = typer.Typer(
 )
 
 HostOption = Annotated[
-    str | None, typer.Option("--host", help="Address to bind or connect to.")
+    str | None,
+    typer.Option("--host", help="Address to bind or connect to, or 'auto' to discover it."),
 ]
 PortOption = Annotated[int | None, typer.Option("--port", help="Port to bind or connect to.")]
 AllowLanOption = Annotated[
@@ -37,6 +38,16 @@ AllowLanOption = Annotated[
 
 
 def _settings(host: str | None, port: int | None, allow_lan: bool = False) -> Settings:
+    from . import net
+
+    try:
+        # Resolved before Settings.load validates it, so discovery is incapable of
+        # widening what may be bound.
+        host = net.resolve_host(host)
+    except net.NoLanAddress as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(Exit.ERROR) from exc
+
     try:
         return Settings.load(host=host, port=port, allow_lan=allow_lan)
     except ValueError as exc:
@@ -302,3 +313,15 @@ def list_documents(
             raise _fail(exc.detail, Exit.ERROR) from exc
 
     typer.echo(json.dumps(items, indent=2) if as_json else report.render_list(items))
+
+
+@app.command("lan-address")
+def lan_address() -> None:
+    """Print the private address that `--host auto` would choose."""
+    from . import net
+
+    try:
+        typer.echo(net.detect())
+    except net.NoLanAddress as exc:
+        typer.secho(f"error: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(Exit.ERROR) from exc

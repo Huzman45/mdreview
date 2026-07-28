@@ -194,6 +194,32 @@ http://10.31.41.35:7391/?t=<token>
 The token lives at `~/.local/share/mdreview/lan_token`, mode `0600`. Delete that
 file to revoke every device; the next LAN start mints a new one.
 
+### Running it always, for a tablet
+
+```bash
+mise run install-service     # start it now and on every login
+mise run service-status      # running on 10.31.41.9 (pid 1532)
+mise run uninstall-service   # stop it and remove it completely
+```
+
+The service resolves your private address at **every start**, so a changed DHCP
+lease is handled by restarting it rather than reinstalling. `mdreview lan-address`
+prints what it would pick, and `mdreview serve --host auto --allow-lan` does the
+same thing interactively.
+
+Bookmark your machine's Bonjour name on the tablet rather than an IP —
+`http://<your-hostname>.local:7391/?t=<token>` — because the name survives DHCP
+changes and a literal address does not.
+
+Two things worth knowing:
+
+- Once installed, the server is running whenever you are logged in. Rotating the
+  token is how you revoke a device, not stopping the server.
+- On the machine itself, that `.local` name may resolve to `127.0.0.1` and reach
+  the loopback server, which needs no token. From another device it resolves to the
+  private address and the token is required. Do not read a token-less `200` on your
+  own machine as the guard being off.
+
 A server binds one address, so a LAN-bound server is not listening on loopback.
 The agent will simply start its own loopback server on demand, and the two share
 the same SQLite database in WAL mode — a document submitted by the agent appears

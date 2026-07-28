@@ -51,3 +51,38 @@ fi
 [tasks.setup]
 description = "Install the CLI and the agent skill for all agents"
 depends = ["install-cli", "install-skill"]
+
+[tasks.install-service]
+description = "Run the LAN review server as a background service"
+run = """
+uv run python -c "
+from mdreview import service
+import shutil, sys
+exe = shutil.which('mdreview')
+if not exe:
+    sys.exit('mdreview is not on PATH; run: mise run install-cli')
+path = service.install(mdreview=exe)
+print(f'installed {path}')
+"
+sleep 3
+mise run service-status
+"""
+
+[tasks.uninstall-service]
+description = "Stop and remove the LAN background service"
+run = """
+uv run python -c "
+from mdreview import service
+existed = service.uninstall()
+print('removed' if existed else 'nothing was installed')
+"
+"""
+
+[tasks.service-status]
+description = "Report whether the LAN background service is running"
+run = """
+uv run python -c "
+from mdreview import service
+print(service.state().describe())
+"
+"""
