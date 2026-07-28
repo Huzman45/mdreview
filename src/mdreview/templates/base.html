@@ -14,6 +14,7 @@
   <script src="/static/app.js" defer></script>
   {% if has_diagrams %}<script src="/static/diagrams.js" defer></script>{% endif %}
   {% if view == "raw" %}<script src="/static/rawlines.js" defer></script>{% endif %}
+  {% if view in ("rendered", "raw") %}<script src="/static/anchors.js" defer></script>{% endif %}
 </head>
 <body>
   {# The right-hand group lives here rather than in each page, so the status and

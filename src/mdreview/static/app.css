@@ -379,16 +379,30 @@ body {
 }
 li.mdr-block { list-style-position: outside; }
 
-/* Margin notes: annotations beside the text, like a marked-up proof. */
+/* Margin notes: annotations beside the text, like a marked-up proof.
+
+   In the two-column layout the margin is a relative canvas and each note is
+   positioned absolutely at its anchor's height by anchors.js — sticky went
+   away with anchoring, since a note tied to its passage cannot also follow
+   the scroll. The flex properties only matter in the stacked layout, where
+   the notes return to normal flow. */
 .margin {
-  position: sticky;
-  top: 1.5rem;
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 1rem;
   font-family: var(--sans);
   min-width: 0;
 }
+
+.margin .note {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+/* Glide when nudged by a neighbour — enabled by anchors.js only after the
+   first placement, so nothing animates in from the container top. */
+.margin.anchored .note { transition: top 140ms ease; }
 
 .note {
   border-left: 2px solid var(--accent);
@@ -551,6 +565,7 @@ li.mdr-block { list-style-position: outside; }
 .rawline { display: flex; gap: 0.8rem; cursor: pointer; transition: background 90ms; }
 .rawline:hover { background: var(--paper-2); }
 .rawline.selected { background: var(--select); box-shadow: inset 2px 0 0 var(--accent); }
+.rawline.referenced { background: var(--refer); }
 
 .rawline-no {
   flex: 0 0 2.8rem;
@@ -815,9 +830,10 @@ li.mdr-block { list-style-position: outside; }
 
 @media (max-width: 62rem) {
   .prose-wrap { grid-template-columns: minmax(0, 1fr); }
-  /* Sticky is wrong once the margin sits below the text: it would pin the
-     notes over the prose being read. */
+  /* One column has no "beside": the margin returns to a stacked list below
+     the text and anchors.js stands down. */
   .margin { position: static; border-top: 1px solid var(--rule); padding-top: 1.2rem; }
+  .margin .note { position: static; transition: none; }
   .sheet { padding: 1.5rem 1.1rem 8rem; }
   body { font-size: 17px; }
 }
