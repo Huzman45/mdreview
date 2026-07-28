@@ -111,3 +111,11 @@ def test_describe_covers_each_state() -> None:
     running = service.State(True, True, 123, "10.31.41.9")
     assert "10.31.41.9" in running.describe()
     assert "123" in running.describe()
+
+
+def test_status_degrades_rather_than_raising_without_lsof(monkeypatch) -> None:
+    """A status command must never crash; lsof lives in /usr/sbin and a trimmed
+    PATH would otherwise raise FileNotFoundError."""
+    monkeypatch.setattr(service.shutil, "which", lambda _: None)
+    monkeypatch.setattr(service.Path, "exists", lambda _: False)
+    assert service._listening_address(1, 7391) is None

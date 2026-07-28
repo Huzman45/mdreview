@@ -34,3 +34,6 @@ htmlcov/
 
 # Worktrees
 .worktrees/
+
+# Screenshot output from scripts/shots.py
+.shots*/

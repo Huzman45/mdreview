@@ -22,6 +22,7 @@ mdreview = "mdreview.cli:app"
 
 [dependency-groups]
 dev = [
+    "playwright>=1.61.0",
     "pytest>=8.3",
     "ruff>=0.8",
 ]

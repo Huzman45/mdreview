@@ -13,6 +13,7 @@ between a service and a restart loop.
 from __future__ import annotations
 
 import plistlib
+import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -170,12 +171,24 @@ def state(*, port: int | None = None) -> State:
 
 
 def _listening_address(pid: int, port: int) -> str | None:
-    result = subprocess.run(
-        ["lsof", "-nP", "-a", "-p", str(pid), f"-iTCP:{port}", "-sTCP:LISTEN"],
-        capture_output=True,
-        text=True,
-        timeout=10,
-    )
+    """The address the process is listening on, or None if it cannot be read.
+
+    Resolved by absolute path with a fallback, because `lsof` lives in
+    `/usr/sbin` and a caller with a trimmed PATH would otherwise crash a status
+    command — which should degrade to "unknown", never raise.
+    """
+    tool = shutil.which("lsof") or "/usr/sbin/lsof"
+    if not Path(tool).exists():
+        return None
+    try:
+        result = subprocess.run(
+            [tool, "-nP", "-a", "-p", str(pid), f"-iTCP:{port}", "-sTCP:LISTEN"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
     for line in result.stdout.splitlines():
         if "LISTEN" in line and ":" in line:
             for field in line.split():

@@ -129,7 +129,7 @@
     f.end.value = "";
     f.body.disabled = true;
     f.submit.disabled = true;
-    f.label.textContent = "No block selected";
+    f.label.textContent = "Select a block";
     if (f.body.dataset.idlePlaceholder !== undefined) {
       f.body.placeholder = f.body.dataset.idlePlaceholder;
     }
