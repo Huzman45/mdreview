@@ -238,7 +238,7 @@ def _sidebar_context(
         "slug": document.slug,
         "version": version,
         "comments": store.list_comments(conn, version.id),
-        "unresolved": store.count_unresolved(conn, version.id),
+        "open_count": store.count_open(conn, version.id),
         "can_edit": is_latest and version.status is ReviewStatus.PENDING,
         "is_latest": is_latest,
     }
@@ -313,14 +313,36 @@ def create_comment(
     return _sidebar(request, conn, document, version)
 
 
-@router.post("/d/{slug}/v/{n}/comments/{ref}/resolve", response_class=HTMLResponse)
-def resolve_comment(slug: str, n: int, ref: str, request: Request, conn: Conn) -> HTMLResponse:
+@router.post("/d/{slug}/v/{n}/comments/{ref}/edit", response_class=HTMLResponse)
+def edit_comment(
+    slug: str,
+    n: int,
+    ref: str,
+    request: Request,
+    conn: Conn,
+    body: Annotated[str, Form()] = "",
+) -> HTMLResponse:
     document = _require_document(conn, slug)
     version = _require_version(conn, document, n)
     try:
-        store.resolve_comment(conn, version.id, ref)
+        store.update_comment(conn, version.id, ref, body=body)
     except NotFound as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+    except StoreError as exc:
+        return _sidebar(request, conn, document, version, error=str(exc))
+    return _sidebar(request, conn, document, version)
+
+
+@router.post("/d/{slug}/v/{n}/comments/{ref}/delete", response_class=HTMLResponse)
+def delete_comment(slug: str, n: int, ref: str, request: Request, conn: Conn) -> HTMLResponse:
+    document = _require_document(conn, slug)
+    version = _require_version(conn, document, n)
+    try:
+        store.delete_comment(conn, version.id, ref)
+    except NotFound as exc:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
+    except StoreError as exc:
+        return _sidebar(request, conn, document, version, error=str(exc))
     return _sidebar(request, conn, document, version)
 
 

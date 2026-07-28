@@ -6,10 +6,10 @@
     <span class="docrow-main">
       <span class="docrow-title">
         <strong>{{ item.document.title }}</strong>
-        {% if item.unresolved %}
+        {% if item.open_count %}
           <span class="chip"
-                title="{{ item.unresolved }} unresolved comment{{ 's' if item.unresolved != 1 }}">
-            {{ item.unresolved }} open
+                title="{{ item.open_count }} open comment{{ 's' if item.open_count != 1 }}">
+            {{ item.open_count }} open
           </span>
         {% endif %}
       </span>

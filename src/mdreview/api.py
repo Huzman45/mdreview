@@ -182,6 +182,7 @@ class CommentResponse(BaseModel):
     quoted: str
     body: str
     state: CommentState
+    edited_at: str | None
     created_at: str
 
     @classmethod
@@ -193,6 +194,7 @@ class CommentResponse(BaseModel):
             quoted=comment.quoted,
             body=comment.body,
             state=comment.state,
+            edited_at=comment.edited_at,
             created_at=comment.created_at,
         )
 
@@ -237,29 +239,6 @@ def get_comments(
     ]
 
 
-class ResolveResponse(BaseModel):
-    resolved: list[str]
-    unresolved_remaining: int
-
-
-class ResolveRequest(BaseModel):
-    refs: list[str]
-
-
-@router.post("/documents/{slug}/versions/{n}/resolve", response_model=ResolveResponse)
-def resolve_comments(slug: str, n: int, payload: ResolveRequest, conn: Conn) -> ResolveResponse:
-    version = _version(conn, slug, n)
-    try:
-        for ref in payload.refs:
-            store.resolve_comment(conn, version.id, ref)
-    except NotFound as exc:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
-    return ResolveResponse(
-        resolved=payload.refs,
-        unresolved_remaining=store.count_unresolved(conn, version.id),
-    )
-
-
 # -- decisions --------------------------------------------------------------
 
 
@@ -277,7 +256,7 @@ class StateResponse(BaseModel):
     decision_note: str | None
     decided_at: str | None
     url: str
-    unresolved: list[CommentResponse]
+    open_comments: list[CommentResponse]
 
 
 @router.post("/documents/{slug}/versions/{n}/decision", response_model=VersionSummary)
@@ -316,5 +295,5 @@ def get_state(slug: str, conn: Conn, settings: Config) -> StateResponse:
         decision_note=state.version.decision_note,
         decided_at=state.version.decided_at,
         url=review_url(settings, state.document.slug),
-        unresolved=[CommentResponse.of(c) for c in state.unresolved],
+        open_comments=[CommentResponse.of(c) for c in state.open_comments],
     )

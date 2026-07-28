@@ -210,30 +210,17 @@ def test_unreachable_is_distinct_from_every_review_outcome() -> None:
     assert Exit.UNREACHABLE not in outcomes
 
 
-# -- resolve / list / status ------------------------------------------------
+# -- list / status ----------------------------------------------------------
 
 
-def test_resolve_reports_remaining(cli: CliRunner) -> None:
-    cli.write("PLAN.md", PLAN)
-    cli.run("submit", "PLAN.md", "--no-open")
-    with cli.api() as client:
-        for body in ("one", "two"):
-            client.post(
-                "/api/documents/plan/versions/1/comments",
-                json={"line_start": 1, "line_end": 1, "body": body},
-            )
+def test_resolve_is_not_a_command(cli: CliRunner) -> None:
+    """The old bookkeeping step is gone; resubmission is what closes comments.
 
+    An agent following a stale skill should fail loudly here, not silently
+    no-op.
+    """
     result = cli.run("resolve", "plan", "C1")
-    assert result.returncode == Exit.OK
-    assert "resolved C1" in result.stdout
-    assert "1 unresolved remaining" in result.stdout
-
-
-def test_resolve_an_unknown_reference_errors(cli: CliRunner) -> None:
-    cli.write("PLAN.md", PLAN)
-    cli.run("submit", "PLAN.md", "--no-open")
-    result = cli.run("resolve", "plan", "C9")
-    assert result.returncode == Exit.ERROR
+    assert result.returncode != Exit.OK
 
 
 def test_list_pending(cli: CliRunner) -> None:
@@ -258,7 +245,7 @@ def test_status_prints_one_line(cli: CliRunner) -> None:
     cli.run("submit", "PLAN.md", "--no-open")
     result = cli.run("status", "plan")
     assert result.returncode == Exit.OK
-    assert result.stdout.strip() == "STATUS: pending   VERSION: 1   UNRESOLVED: 0"
+    assert result.stdout.strip() == "STATUS: pending   VERSION: 1   OPEN: 0"
 
 
 def test_version_flag(cli: CliRunner) -> None:
@@ -289,7 +276,6 @@ def test_the_full_review_loop(cli: CliRunner) -> None:
 
     assert cli.run("review", "plan").returncode == Exit.CHANGES_REQUESTED
 
-    cli.run("resolve", "plan", "C1")
     path.write_text("# Plan\n\nFirst paragraph.\n\n- gamma\n- beta\n")
     assert cli.run("submit", "PLAN.md", "--slug", "plan", "--no-open").returncode == Exit.OK
 

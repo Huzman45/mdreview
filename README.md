@@ -59,7 +59,6 @@ tell me the URL, and stop. When I say the review is done, run
 ```bash
 mdreview submit PLAN.md          # publish, open the browser, print the URL
 mdreview review plan             # read the outcome; the exit code is the answer
-mdreview resolve plan C1 C2      # mark comments addressed
 mdreview list --pending          # what is awaiting a decision
 mdreview status plan             # one-line summary
 mdreview open plan               # reopen the page
@@ -74,7 +73,7 @@ can branch on it without parsing text.
 | Code | Meaning | Agent action |
 | ---- | ------- | ------------ |
 | 0 | `approved` | Proceed |
-| 2 | `changes_requested` | Address comments, resolve, resubmit |
+| 2 | `changes_requested` | Address comments, resubmit |
 | 3 | `pending` — no decision recorded | Report and wait; **do not** proceed |
 | 4 | `cancelled` | Stop and ask |
 | 5 | API unreachable | Infrastructure failure, not a verdict |
@@ -89,9 +88,9 @@ changes requested" as "approved" would implement an unreviewed plan.
 file:
 
 ```
-STATUS: changes_requested   VERSION: 1   UNRESOLVED: 2
+STATUS: changes_requested   VERSION: 1   OPEN: 2
 
---- unresolved comments (2) ---
+--- open comments (2) ---
 
 [C1] L12-14
   > ## Phase 2: migrate the table in one shot

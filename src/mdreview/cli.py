@@ -259,36 +259,8 @@ def status(
         report.header(
             ReviewStatus(state["status"]),
             state["version"],
-            len(state.get("unresolved") or []),
+            len(state.get("open_comments") or []),
         )
-    )
-
-
-@app.command()
-def resolve(
-    slug: Annotated[str, typer.Argument(help="Document slug.")],
-    refs: Annotated[list[str], typer.Argument(help="Comment references, e.g. C1 C2.")],
-    host: HostOption = None,
-    port: PortOption = None,
-    allow_lan: AllowLanOption = False,
-) -> None:
-    """Mark comments as addressed."""
-    settings = _settings(host, port, allow_lan)
-    with Client(settings) as client:
-        state = _state(client, slug)
-        try:
-            result = client.post(
-                f"/api/documents/{slug}/versions/{state['version']}/resolve",
-                json={"refs": refs},
-            )
-        except ApiUnreachable as exc:
-            raise _fail(str(exc), Exit.UNREACHABLE) from exc
-        except ApiError as exc:
-            raise _fail(exc.detail, Exit.ERROR) from exc
-
-    typer.echo(
-        f"resolved {', '.join(result['resolved'])} "
-        f"({result['unresolved_remaining']} unresolved remaining)"
     )
 
 

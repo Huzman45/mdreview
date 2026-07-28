@@ -22,9 +22,15 @@ PENDING_NOTE = (
 
 CANCELLED_NOTE = "This review was cancelled. Stop and ask the user how to proceed."
 
+REVISE_NOTE = (
+    "Address each comment, then resubmit the revised file with "
+    "'mdreview submit <file> --slug <slug>' for another round. Resubmitting "
+    "supersedes these comments; there is nothing to mark as done."
+)
 
-def header(status: ReviewStatus, version: int, unresolved: int) -> str:
-    return f"STATUS: {status.value}   VERSION: {version}   UNRESOLVED: {unresolved}"
+
+def header(status: ReviewStatus, version: int, open_count: int) -> str:
+    return f"STATUS: {status.value}   VERSION: {version}   OPEN: {open_count}"
 
 
 def comment_block(comment: dict[str, Any]) -> str:
@@ -44,8 +50,8 @@ def line_label(comment: dict[str, Any]) -> str:
 def render_state(state: dict[str, Any]) -> str:
     """The full human- and agent-readable report for a document's latest version."""
     status = ReviewStatus(state["status"])
-    unresolved = state.get("unresolved") or []
-    parts = [header(status, state["version"], len(unresolved))]
+    open_comments = state.get("open_comments") or []
+    parts = [header(status, state["version"], len(open_comments))]
 
     note = state.get("decision_note")
     if note:
@@ -59,19 +65,16 @@ def render_state(state: dict[str, Any]) -> str:
         parts.append("")
         parts.append(CANCELLED_NOTE)
 
-    if unresolved:
+    if open_comments:
         parts.append("")
-        parts.append(f"--- unresolved comments ({len(unresolved)}) ---")
-        for comment in unresolved:
+        parts.append(f"--- open comments ({len(open_comments)}) ---")
+        for comment in open_comments:
             parts.append("")
             parts.append(comment_block(comment))
 
     if status is ReviewStatus.CHANGES_REQUESTED:
         parts.append("")
-        parts.append(
-            "Address each comment, resolve the ones you have addressed with "
-            "'mdreview resolve', then resubmit the file for another round."
-        )
+        parts.append(REVISE_NOTE)
 
     return "\n".join(parts)
 
