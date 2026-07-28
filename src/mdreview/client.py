@@ -130,6 +130,9 @@ class Client:
     def post(self, path: str, **kwargs: Any) -> Any:
         return self.request("POST", path, **kwargs)
 
+    def delete(self, path: str, **kwargs: Any) -> Any:
+        return self.request("DELETE", path, **kwargs)
+
 
 def _detail(response: httpx.Response) -> str:
     try:

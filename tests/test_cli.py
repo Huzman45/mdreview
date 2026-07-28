@@ -46,7 +46,7 @@ class CliRunner:
             "MDREVIEW_PORT": str(settings.port),
         }
 
-    def run(self, *args: str) -> subprocess.CompletedProcess[str]:
+    def run(self, *args: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [sys.executable, "-m", "mdreview", *args],
             capture_output=True,
@@ -54,6 +54,7 @@ class CliRunner:
             env=self.env,
             cwd=self.workdir,
             timeout=60,
+            input=stdin,
         )
 
     def write(self, name: str, content: str) -> Path:
@@ -238,6 +239,46 @@ def test_list_pending(cli: CliRunner) -> None:
 def test_list_when_empty(cli: CliRunner) -> None:
     result = cli.run("list")
     assert "No documents." in result.stdout
+
+
+# -- delete -----------------------------------------------------------------
+
+
+def test_delete_asks_and_a_decline_changes_nothing(cli: CliRunner) -> None:
+    cli.write("PLAN.md", PLAN)
+    cli.run("submit", "PLAN.md", "--no-open")
+
+    result = cli.run("delete", "plan", stdin="n\n")
+    assert result.returncode == Exit.OK
+    assert "cannot be undone" in result.stdout
+    assert "nothing deleted" in result.stdout
+    assert cli.run("status", "plan").returncode == Exit.OK
+
+
+def test_delete_confirmed_removes_the_document(cli: CliRunner) -> None:
+    cli.write("PLAN.md", PLAN)
+    cli.run("submit", "PLAN.md", "--no-open")
+
+    result = cli.run("delete", "plan", stdin="y\n")
+    assert result.returncode == Exit.OK
+    assert "deleted plan" in result.stdout
+    assert cli.run("status", "plan").returncode == Exit.ERROR
+
+
+def test_delete_yes_skips_the_prompt(cli: CliRunner) -> None:
+    cli.write("PLAN.md", PLAN)
+    cli.run("submit", "PLAN.md", "--no-open")
+
+    result = cli.run("delete", "plan", "--yes")
+    assert result.returncode == Exit.OK
+    assert "Permanently delete" not in result.stdout
+    assert cli.run("status", "plan").returncode == Exit.ERROR
+
+
+def test_delete_unknown_slug_fails_clearly(cli: CliRunner) -> None:
+    result = cli.run("delete", "ghost", "--yes")
+    assert result.returncode == Exit.ERROR
+    assert "ghost" in result.stderr
 
 
 def test_status_prints_one_line(cli: CliRunner) -> None:

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
 from . import diff, render, store
@@ -93,10 +93,11 @@ Config = Annotated[Settings, Depends(get_settings)]
 
 @router.get("/", response_class=HTMLResponse)
 def index(request: Request, conn: Conn) -> HTMLResponse:
-    """Documents split by whether they are waiting on the reviewer.
+    """Active documents split by whether they are waiting on the reviewer.
 
     The page answers one question — what needs my attention — so the two groups
-    are separated rather than interleaved by date.
+    are separated rather than interleaved by date. Archived documents live on
+    their own page, reachable from the foot of this one.
     """
     summaries = store.list_documents(conn)
     waiting = [s for s in summaries if s.version.status is ReviewStatus.PENDING]
@@ -104,8 +105,38 @@ def index(request: Request, conn: Conn) -> HTMLResponse:
     return templates.TemplateResponse(
         request,
         "index.html",
-        {"summaries": summaries, "waiting": waiting, "decided": decided},
+        {
+            "summaries": summaries,
+            "waiting": waiting,
+            "decided": decided,
+            "archived_count": store.count_archived(conn),
+        },
     )
+
+
+@router.get("/archived", response_class=HTMLResponse)
+def archived_index(request: Request, conn: Conn) -> HTMLResponse:
+    """The shelf: archived documents, restorable, newest first."""
+    return templates.TemplateResponse(
+        request,
+        "archived.html",
+        {"summaries": store.list_documents(conn, archived=True)},
+    )
+
+
+@router.post("/d/{slug}/archive")
+def archive_document(slug: str, conn: Conn) -> RedirectResponse:
+    _require_document(conn, slug)
+    store.archive_document(conn, slug)
+    # 303 turns the POST into a GET of the list the reviewer was looking at.
+    return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.post("/d/{slug}/unarchive")
+def unarchive_document(slug: str, conn: Conn) -> RedirectResponse:
+    _require_document(conn, slug)
+    store.unarchive_document(conn, slug)
+    return RedirectResponse("/archived", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/d/{slug}", response_class=HTMLResponse)

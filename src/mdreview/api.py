@@ -118,7 +118,7 @@ def submit_document(payload: SubmitRequest, conn: Conn, settings: Config) -> Sub
 
 @router.get("/documents", response_model=list[DocumentListItem])
 def list_documents(
-    conn: Conn, settings: Config, pending: bool = False
+    conn: Conn, settings: Config, pending: bool = False, archived: bool = False
 ) -> list[DocumentListItem]:
     return [
         DocumentListItem(
@@ -130,7 +130,7 @@ def list_documents(
             url=review_url(settings, item.document.slug),
             created_at=item.version.created_at,
         )
-        for item in store.list_documents(conn, pending_only=pending)
+        for item in store.list_documents(conn, pending_only=pending, archived=archived)
     ]
 
 
@@ -157,6 +157,17 @@ def get_document(slug: str, conn: Conn, settings: Config) -> DocumentResponse:
         ),
         versions=[version.n for version in store.list_versions(conn, document.id)],
     )
+
+
+@router.delete("/documents/{slug}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_document(slug: str, conn: Conn) -> None:
+    """Permanent removal of the document and its whole history.
+
+    The CLI confirms before calling this; the API itself does not ask twice,
+    because the caller holding the terminal already did.
+    """
+    _require(conn, slug)
+    store.delete_document(conn, slug)
 
 
 def _require(conn: sqlite3.Connection, slug: str) -> store.Document:

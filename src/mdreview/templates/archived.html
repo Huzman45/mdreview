@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% from "_docrow.html" import docrow %}
+{% block title %}Archived — mdreview{% endblock %}
+
+{% block masthead %}
+  <span class="masthead-sep">/</span>
+  <span class="masthead-path">archived</span>
+{% endblock %}
+
+{% block content %}
+<article class="sheet">
+{% if not summaries %}
+  <div class="empty">
+    <p class="empty-title">Nothing archived</p>
+    <p><a href="/">Back to the index</a></p>
+  </div>
+{% else %}
+<div class="index">
+  <section class="docgroup">
+    <h2 class="docgroup-head">
+      Archived
+      <span class="docgroup-count">{{ summaries|length }}</span>
+    </h2>
+    <div class="doclist">
+      {% for item in summaries %}{{ docrow(item, false, action="restore") }}{% endfor %}
+    </div>
+  </section>
+  <p class="index-foot"><a href="/">Back to the index</a></p>
+</div>
+{% endif %}
+</article>
+{% endblock %}
