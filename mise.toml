@@ -25,3 +25,29 @@ run = "uv run ruff format ."
 [tasks.check]
 description = "Lint, format-check and test"
 run = ["uv run ruff check .", "uv run ruff format --check .", "uv run pytest"]
+
+[tasks.install-cli]
+description = "Put the mdreview command on PATH"
+run = "uv tool install --force --editable ."
+
+[tasks.install-skill]
+description = "Install the md-review skill for opencode and Claude Code"
+run = """
+set -e
+canonical="$HOME/.agents/skills/md-review"
+mkdir -p "$HOME/.agents/skills"
+rm -rf "$canonical"
+cp -R skill/md-review "$canonical"
+echo "installed $canonical"
+
+# Claude Code reads ~/.claude/skills; symlink so there is one source of truth.
+if [ -d "$HOME/.claude" ]; then
+  mkdir -p "$HOME/.claude/skills"
+  ln -sfn ../../.agents/skills/md-review "$HOME/.claude/skills/md-review"
+  echo "linked $HOME/.claude/skills/md-review"
+fi
+"""
+
+[tasks.setup]
+description = "Install the CLI and the agent skill for all agents"
+depends = ["install-cli", "install-skill"]

@@ -5,14 +5,14 @@ license: MIT
 compatibility: Requires the mdreview CLI on PATH.
 metadata:
   author: fjvillamarin
-  version: "1.0"
+  version: "2.0"
 ---
 
 # Reviewing a document with mdreview
 
 `mdreview` turns a markdown file into a web page where the user can comment on
-individual blocks and either approve it or send it back. You submit, you stop,
-they review, they nudge you, you read the outcome.
+individual blocks — or individual lines — and either approve it or send it back.
+You submit, you stop, they review, they nudge you, you read the outcome.
 
 **You never block waiting for the review.** Submit, tell the user the URL, and
 end your turn.
@@ -85,7 +85,8 @@ STATUS: changes_requested   VERSION: 1   UNRESOLVED: 2
 ```
 
 Everything you need is in that output; you do not need to re-read the file to
-understand the feedback.
+understand the feedback. A comment may target a single line — including one line
+inside a fenced code block — so read the line range, not just the quote.
 
 Then:
 
@@ -103,6 +104,33 @@ Then:
 If you disagree with a comment, do not silently resolve it. Say so in your
 message to the user and let them decide.
 
+## Write documents that use the renderer
+
+The review page renders more than plain prose. Using these makes a plan easier
+to review, so prefer them where they fit:
+
+- **Task lists** — `- [x] done` / `- [ ] todo` render as real checkboxes. Good
+  for a phased plan. They are read-only for the user, so do not expect them to
+  tick anything; they will comment instead.
+- **Diagrams** — a fence tagged `mermaid` renders as a diagram. Good for a flow,
+  a state machine, or a dependency graph. If it fails to parse the user sees the
+  source, so a broken diagram is visible rather than silently missing.
+- **Tables, blockquotes, code fences** all render normally.
+
+Every heading, paragraph, list item, table, diagram and code block is separately
+commentable, so structure the document in small blocks rather than long
+paragraphs — it gives the user precise places to attach feedback.
+
+## The three views
+
+Worth mentioning to the user if they are looking for something:
+
+- **Rendered** — the default; click any block to comment.
+- **Source** — numbered lines; click one, shift-click to extend. This is how
+  they comment on a single line inside a code block.
+- **Changes** — a diff against the previous version. Appears once a document has
+  two versions, and is how they check that a revision did what you claimed.
+
 ## Other commands
 
 ```bash
@@ -111,11 +139,27 @@ mdreview status <slug>       # one-line summary
 mdreview open <slug>         # reopen the review page
 ```
 
+## Reviewing from a phone
+
+If the user wants to review on another device on the same network, the server
+must be started explicitly on that interface:
+
+```bash
+mdreview serve --host <private-ip> --allow-lan
+```
+
+It prints a URL containing a capability token; the user opens that one link and
+the token is remembered. Requests from another machine without the token are
+refused. Loopback never needs the token, so your own commands are unaffected.
+
+Find the address with `ipconfig getifaddr en0` on macOS. It changes with DHCP, so
+if a previously working link stops loading, the address has probably moved.
+
 ## Notes
 
 - The server starts itself on first use. There is no daemon to manage.
 - Each submission is an immutable version. Comments on an older version are
   marked outdated rather than moved, so nothing you resubmit can corrupt
   feedback the user already wrote.
-- Everything is local and single user. It uses loopback by default; an explicit
-  private-LAN opt-in can make review pages reachable from a phone.
+- Everything is local and single user. It listens on loopback unless explicitly
+  told otherwise.

@@ -26,18 +26,32 @@ cd mdreview
 uv sync
 ```
 
-Put the CLI on your `PATH`:
+Then install the CLI and the agent skill together:
 
 ```bash
-uv tool install --editable .
+mise run setup
 ```
 
-Then install the agent skill so your agent reaches for it unprompted:
+That does two things:
 
-```bash
-mkdir -p ~/.agents/skills
-cp -r skill/md-review ~/.agents/skills/
-ln -s ../../.agents/skills/md-review ~/.claude/skills/md-review   # if you use ~/.claude/skills
+- `install-cli` — `uv tool install --editable .`, putting `mdreview` on your
+  `PATH`. Editable means the command tracks this checkout, so **the tool breaks
+  if you move or delete this directory**. Drop `--editable` if you would rather
+  have a copy that survives that, at the cost of reinstalling to pick up changes.
+- `install-skill` — copies `skill/md-review` to `~/.agents/skills/md-review` and
+  symlinks it into `~/.claude/skills/`, so opencode and Claude Code both see one
+  source of truth. Re-run it after editing the skill.
+
+Optionally, add this to your global agent instructions so agents reach for it by
+default rather than pasting plans into chat:
+
+```markdown
+## Plan review
+
+When you produce a plan, design or proposal for me to approve, do not paste it
+into chat. Write it to a markdown file and publish it with `mdreview submit`,
+tell me the URL, and stop. When I say the review is done, run
+`mdreview review <slug>` first and branch on the exit code.
 ```
 
 ## Use
