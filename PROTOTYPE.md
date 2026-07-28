@@ -42,9 +42,16 @@ switcher do not exist, so this cannot reach anyone by accident.
 
 ## Verdict
 
-_To fill in._ The useful answer is usually not "B" but **"the header from B with
-the outline from C"** — say that if it is what you think.
+**A — Editorial wins.** Migrate everything to it, including dark mode, the diff, and
+diagrams.
 
-- Winner:
-- Steal from the others:
-- Reject outright:
+- **Winner: A.** Warm paper, serif headings, wide measure, and comments in the margin
+  beside the text they annotate rather than in a right rail.
+- **Reject: B (Glass).** Distinctive, but floating chrome fights a reading surface —
+  the sheet covered the words it was annotating on the first cut, and the dock sits
+  permanently over the text.
+- **Reject: C (Console).** The outline rail was the best single idea in the set and is
+  worth revisiting on its own, but monospace-everything is wrong for prose review.
+
+Migration is on `feat/11-editorial-design`. Once that lands, delete this worktree and
+branch.
