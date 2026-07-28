@@ -12,9 +12,7 @@ from __future__ import annotations
 
 import ipaddress
 import os
-import shutil
 import subprocess
-from pathlib import Path
 
 #: Address range preferred when the machine has more than one private address.
 #: Defaults to the range the operator confirmed their tablet can reach, directly
@@ -68,32 +66,11 @@ def choose(addresses: list[tuple[str, str]], *, prefer: str | None = None) -> st
     return candidates[0]
 
 
-def _tool(name: str, *fallbacks: str) -> str | None:
-    """Locate a system tool by absolute path.
-
-    Bare names are not enough: `ifconfig` lives in /sbin, which is absent from a
-    trimmed PATH and from the minimal environment launchd hands a service. Both
-    would make discovery silently report no addresses at all.
-    """
-    found = shutil.which(name)
-    if found:
-        return found
-    for candidate in fallbacks:
-        if Path(candidate).exists():
-            return candidate
-    return None
-
-
 def interface_addresses() -> list[tuple[str, str]]:
     """Enumerate this machine's interfaces and their IPv4 addresses (macOS)."""
-    ifconfig = _tool("ifconfig", "/sbin/ifconfig", "/usr/sbin/ifconfig")
-    ipconfig = _tool("ipconfig", "/usr/sbin/ipconfig", "/sbin/ipconfig")
-    if not ifconfig or not ipconfig:
-        return []
-
     try:
         names = subprocess.run(
-            [ifconfig, "-l"], capture_output=True, text=True, timeout=5, check=True
+            ["ifconfig", "-l"], capture_output=True, text=True, timeout=5, check=True
         ).stdout.split()
     except (OSError, subprocess.SubprocessError):
         return []
@@ -102,7 +79,7 @@ def interface_addresses() -> list[tuple[str, str]]:
     for name in names:
         try:
             result = subprocess.run(
-                [ipconfig, "getifaddr", name],
+                ["ipconfig", "getifaddr", name],
                 capture_output=True,
                 text=True,
                 timeout=5,

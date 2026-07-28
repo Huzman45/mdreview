@@ -1,24 +1,27 @@
 {% extends "base.html" %}
 {% block title %}{{ document.title }} v{{ old_version.n }}→v{{ version.n }} — mdreview{% endblock %}
 
+{% block topbar %}
+  <div class="meta">
+    <span class="version">v{{ old_version.n }} → v{{ version.n }}</span>
+    {% if not diff.is_empty %}
+      <span class="diffstat"><span class="added">+{{ diff.added }}</span> <span class="removed">−{{ diff.removed }}</span></span>
+    {% endif %}
+  </div>
+{% endblock %}
+
 {% block content %}
-<article class="sheet">
-  <header class="dochead">
-    <div class="colophon">
-      <span>Comparing v{{ old_version.n }} with v{{ version.n }}</span>
-      {% if not diff.is_empty %}
-        <span class="colophon-dot">·</span>
-        <span class="diffstat"><span class="added">+{{ diff.added }}</span> <span class="removed">−{{ diff.removed }}</span></span>
-      {% endif %}
-    </div>
-    <h1 class="doc-title">{{ document.title }}</h1>
-    {% include "_viewnav.html" %}
-  </header>
+<article class="document diff-page">
+  <h1 class="doc-title">{{ document.title }}</h1>
+
+  {% include "_viewnav.html" %}
 
   {% if diff.is_empty %}
-    <p class="diff-empty">Nothing changed between v{{ old_version.n }} and v{{ version.n }}.</p>
+    <p class="comments-empty diff-empty">
+      Nothing changed between v{{ old_version.n }} and v{{ version.n }}.
+    </p>
   {% else %}
-    {# Escaped; nothing here is rendered as markup. #}
+    {# Every line is escaped by autoescaping; nothing here is rendered as markup. #}
     <table class="difftable">
       <tbody>
         {% for row in diff.rows %}

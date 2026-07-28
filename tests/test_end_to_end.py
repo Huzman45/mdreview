@@ -185,7 +185,7 @@ def test_a_retried_submit_does_not_discard_review_work(live: Harness) -> None:
 
     page = live.page("/d/plan")
     assert "half-written thought" in page
-    assert "note-outdated" not in page
+    assert "comment-outdated" not in page
 
 
 FENCED_PLAN = """# Cutover
@@ -250,7 +250,7 @@ def test_a_review_driven_from_the_source_and_diff_views(live: Harness) -> None:
 
     # The agent resolved it before resubmitting, so it stays resolved rather
     # than being swept to outdated along with anything left open.
-    assert "note-resolved" in live.page("/d/cutover/v/1")
+    assert "comment-resolved" in live.page("/d/cutover/v/1")
 
     # The diff shows precisely what changed, without re-reading the document.
     diff = live.page("/d/cutover/diff/1/2")

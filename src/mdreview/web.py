@@ -152,14 +152,8 @@ def _document_page(
             "body": rendered.html,
             "blocks": rendered.blocks,
             "has_diagrams": rendered.has_diagrams,
-            # The document already prints this heading; showing it in the
-            # colophon too gives the page two competing headlines.
-            "suppress_title": (
-                rendered.leading_heading is not None
-                and rendered.leading_heading == document.title.strip()
-            ),
             "error": error,
-            **_review_context(conn, document, version),
+            **_sidebar_context(conn, document, version),
         },
     )
 
@@ -224,15 +218,15 @@ def document_raw(slug: str, n: int, request: Request, conn: Conn) -> HTMLRespons
             "lines": version.content.splitlines(),
             "has_diagrams": False,
             "error": None,
-            **_review_context(conn, document, version),
+            **_sidebar_context(conn, document, version),
         },
     )
 
 
-def _review_context(
+def _sidebar_context(
     conn: sqlite3.Connection, document: store.Document, version: store.Version
 ) -> dict[str, object]:
-    """Everything the verdict bar and the margin need.
+    """Everything the comment sidebar needs.
 
     Editing is only offered on the latest version and only while it is still
     pending; commenting on a closed round would produce feedback no agent will
@@ -250,7 +244,7 @@ def _review_context(
     }
 
 
-def _review(
+def _sidebar(
     request: Request,
     conn: sqlite3.Connection,
     document: store.Document,
@@ -259,11 +253,10 @@ def _review(
     error: str | None = None,
     decision_error: str | None = None,
 ) -> HTMLResponse:
-    """The margin, plus the verdict bar swapped out of band."""
-    context = _review_context(conn, document, version)
+    context = _sidebar_context(conn, document, version)
     context["error"] = error
     context["decision_error"] = decision_error
-    return templates.TemplateResponse(request, "_review_fragment.html", context)
+    return templates.TemplateResponse(request, "_sidebar.html", context)
 
 
 @router.post("/d/{slug}/v/{n}/decision", response_class=HTMLResponse)
@@ -281,17 +274,17 @@ def record_decision(
     try:
         decision = ReviewStatus(status_value)
     except ValueError:
-        return _review(request, conn, document, version, decision_error="Unknown decision.")
+        return _sidebar(request, conn, document, version, decision_error="Unknown decision.")
 
     try:
         store.decide(conn, version=version, status=decision, note=note)
     except store.Conflict as exc:
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     except StoreError as exc:
-        return _review(request, conn, document, version, decision_error=str(exc))
+        return _sidebar(request, conn, document, version, decision_error=str(exc))
 
     refreshed = store.require_version(conn, document.id, n)
-    return _review(request, conn, document, refreshed)
+    return _sidebar(request, conn, document, refreshed)
 
 
 @router.post("/d/{slug}/v/{n}/comments", response_class=HTMLResponse)
@@ -310,14 +303,14 @@ def create_comment(
     try:
         start, end = int(line_start), int(line_end)
     except ValueError:
-        return _review(request, conn, document, version, error="Select a block first.")
+        return _sidebar(request, conn, document, version, error="Select a block first.")
 
     try:
         store.create_comment(conn, version=version, line_start=start, line_end=end, body=body)
     except StoreError as exc:
-        return _review(request, conn, document, version, error=str(exc))
+        return _sidebar(request, conn, document, version, error=str(exc))
 
-    return _review(request, conn, document, version)
+    return _sidebar(request, conn, document, version)
 
 
 @router.post("/d/{slug}/v/{n}/comments/{ref}/resolve", response_class=HTMLResponse)
@@ -328,7 +321,7 @@ def resolve_comment(slug: str, n: int, ref: str, request: Request, conn: Conn) -
         store.resolve_comment(conn, version.id, ref)
     except NotFound as exc:
         raise HTTPException(status.HTTP_404_NOT_FOUND, str(exc)) from exc
-    return _review(request, conn, document, version)
+    return _sidebar(request, conn, document, version)
 
 
 def _require_version(

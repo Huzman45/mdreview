@@ -54,7 +54,7 @@ def test_raw_view_reports_document_state(api: TestClient) -> None:
     page = api.get("/d/plan/v/1/raw").text
     assert "Plan" in page
     assert "pending" in page
-    assert "Version 1" in page
+    assert "v1" in page
 
 
 def test_views_link_to_each_other(api: TestClient) -> None:

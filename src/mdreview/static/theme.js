@@ -32,7 +32,7 @@
     var effective = resolve(choice);
     document.documentElement.setAttribute("data-theme", effective);
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", effective === "dark" ? "#1d1a14" : "#f5f1e8");
+    if (meta) meta.setAttribute("content", effective === "dark" ? "#161a21" : "#ffffff");
     return effective;
   }
 

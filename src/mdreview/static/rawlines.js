@@ -47,7 +47,7 @@
 
     var line = event.target.closest(".mdr-line");
     if (!line) {
-      if (!event.target.closest(".margin")) clear();
+      if (!event.target.closest(".sidebar")) clear();
       return;
     }
 

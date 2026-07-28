@@ -40,7 +40,7 @@ def test_document_page_reports_state(api: TestClient) -> None:
     submit(api, project_path="/tmp/sapphire")
     text = api.get("/d/plan").text
     assert "pending" in text
-    assert "Version 1" in text
+    assert "v1" in text
     assert "/tmp/sapphire" in text
 
 
@@ -200,7 +200,7 @@ def test_theme_script_is_inlined_before_the_stylesheet(api: TestClient) -> None:
 def test_stylesheet_defines_dark_tokens_once(api: TestClient) -> None:
     """Dark tokens in both a media query and an attribute selector can drift."""
     css = api.get("/static/app.css").text
-    assert css.count("--paper: #16140f") == 1
+    assert css.count("--surface-sunken: #1c212a") == 1
     assert ':root[data-theme="dark"]' in css
     assert "prefers-color-scheme: dark" not in css
 
@@ -213,24 +213,3 @@ def test_task_items_are_not_flex_containers(api: TestClient) -> None:
     block = block[: block.index("}")]
     assert "display: block" in block
     assert "flex" not in block
-
-
-def test_the_title_is_not_printed_twice(api: TestClient) -> None:
-    """The document's own heading is the headline; the colophon must not repeat it."""
-    submit(api, content="# Migration plan\n\nBody.\n")
-    page = api.get("/d/plan").text
-    assert page.count("Migration plan") == 2  # <title> and the document's h1
-    assert 'class="doc-title"' not in page
-
-
-def test_a_document_without_a_heading_still_shows_its_title(api: TestClient) -> None:
-    submit(api, content="Just prose, no heading at all.\n", source_name="untitled")
-    page = api.get("/d/untitled").text
-    assert 'class="doc-title"' in page
-    assert "untitled" in page
-
-
-def test_the_source_view_always_shows_the_title(api: TestClient) -> None:
-    """No heading is rendered there, so the colophon title is the only one."""
-    submit(api, content="# Migration plan\n\nBody.\n")
-    assert 'class="doc-title"' in api.get("/d/plan/v/1/raw").text

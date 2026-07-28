@@ -55,7 +55,7 @@
 
     var block = blockOf(event.target);
     if (!block) {
-      if (!event.target.closest(".margin")) clear();
+      if (!event.target.closest(".comment-panel")) clear();
       return;
     }
     // The innermost block wins, so a nested list item beats its parent.
