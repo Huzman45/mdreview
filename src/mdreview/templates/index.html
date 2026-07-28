@@ -1,24 +1,68 @@
 {% extends "base.html" %}
 {% block title %}mdreview{% endblock %}
 
-{% block content %}
-{% if not summaries %}
-  <p class="empty">Nothing submitted yet. Run <code>mdreview submit PLAN.md</code>.</p>
-{% else %}
-<div class="doclist">
-  {% for item in summaries %}
-  <a class="docrow" href="/d/{{ item.document.slug }}">
-    <span class="status status-{{ item.version.status.value }}">{{ item.version.status.value|replace("_", " ") }}</span>
+{% macro docrow(item, waiting) %}
+  <a class="docrow {% if not waiting %}docrow-done{% endif %}" href="/d/{{ item.document.slug }}">
     <span class="docrow-main">
-      <strong>{{ item.document.title }}</strong>
+      <span class="docrow-title">
+        <strong>{{ item.document.title }}</strong>
+        {% if item.unresolved %}
+          <span class="chip chip-open"
+                title="{{ item.unresolved }} unresolved comment{{ 's' if item.unresolved != 1 }}">
+            {{ item.unresolved }} open
+          </span>
+        {% endif %}
+      </span>
       <span class="docrow-sub">
-        {{ item.document.slug }} &middot; v{{ item.version.n }}
-        {% if item.document.project_path %}&middot; {{ item.document.project_path | display_path }}{% endif %}
+        {% if item.document.project_path %}{{ item.document.project_path | display_path }}{% else %}{{ item.document.slug }}{% endif %}
       </span>
     </span>
-    <span class="docrow-date">{{ item.version.created_at[:16]|replace("T", " ") }}</span>
+
+    <span class="docrow-meta">
+      {% if not waiting %}
+        <span class="status status-{{ item.version.status.value }}">{{ item.version.status.value|replace("_", " ") }}</span>
+      {% endif %}
+      <span class="docrow-version">v{{ item.version.n }}{% if item.total_versions > 1 %} of {{ item.total_versions }}{% endif %}</span>
+      <time class="docrow-date" datetime="{{ item.version.created_at }}"
+            title="{{ item.version.created_at }}">{{ item.version.created_at | relative_time }}</time>
+    </span>
   </a>
-  {% endfor %}
+{% endmacro %}
+
+{% block content %}
+{% if not summaries %}
+  <div class="empty">
+    <p class="empty-title">No documents yet</p>
+    <p>Publish one for review with</p>
+    <p><code>mdreview submit PLAN.md</code></p>
+  </div>
+{% else %}
+<div class="index">
+  <section class="docgroup">
+    <h2 class="docgroup-head">
+      Waiting for you
+      <span class="docgroup-count">{{ waiting|length }}</span>
+    </h2>
+    {% if waiting %}
+      <div class="doclist">
+        {% for item in waiting %}{{ docrow(item, true) }}{% endfor %}
+      </div>
+    {% else %}
+      <p class="docgroup-empty">Nothing to review. All caught up.</p>
+    {% endif %}
+  </section>
+
+  {% if decided %}
+  <section class="docgroup">
+    <h2 class="docgroup-head">
+      Decided
+      <span class="docgroup-count">{{ decided|length }}</span>
+    </h2>
+    <div class="doclist">
+      {% for item in decided %}{{ docrow(item, false) }}{% endfor %}
+    </div>
+  </section>
+  {% endif %}
 </div>
 {% endif %}
 {% endblock %}

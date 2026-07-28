@@ -236,13 +236,22 @@ def test_a_decided_version_hides_the_comment_form(api: TestClient) -> None:
 
 
 def test_index_distinguishes_pending_from_decided(api: TestClient) -> None:
+    """Grouping carries it: a decided document shows its decision and sits under
+    Decided rather than among the documents awaiting review."""
     api.post("/api/documents", json={"content": "# A\n", "source_name": "alpha"})
     api.post("/api/documents", json={"content": "# B\n", "source_name": "beta"})
     api.post("/d/alpha/v/1/decision", data={"status": "approved", "note": ""})
 
     page = api.get("/").text
+    assert "Waiting for you" in page
+    assert "Decided" in page
     assert "status-approved" in page
-    assert "status-pending" in page
+
+    waiting, decided = page.split("Decided", 1)
+    # beta is still awaiting review; alpha has been decided.
+    assert "/d/beta" in waiting
+    assert "/d/alpha" in decided
+    assert "/d/alpha" not in waiting
 
 
 def test_api_pending_filter_excludes_decided(api: TestClient) -> None:

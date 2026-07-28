@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Annotated
 
@@ -40,6 +41,44 @@ def display_path(value: str | None) -> str:
 
 templates.env.filters["display_path"] = display_path
 
+
+def relative_time(value: str | None) -> str:
+    """A coarse "how long ago", which is what a reviewer actually wants.
+
+    An exact timestamp answers a question nobody asks; "20m ago" tells you
+    whether an agent is waiting on you right now.
+    """
+    if not value:
+        return ""
+    try:
+        when = datetime.fromisoformat(value)
+    except ValueError:
+        return value
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)
+
+    seconds = (datetime.now(UTC) - when).total_seconds()
+    if seconds < 0:
+        return "just now"
+    minutes = seconds / 60
+    if minutes < 1:
+        return "just now"
+    if minutes < 60:
+        return f"{int(minutes)}m ago"
+    hours = minutes / 60
+    if hours < 24:
+        return f"{int(hours)}h ago"
+    days = hours / 24
+    if days < 7:
+        return f"{int(days)}d ago"
+    weeks = days / 7
+    if weeks < 5:
+        return f"{int(weeks)}w ago"
+    return when.strftime("%d %b %Y")
+
+
+templates.env.filters["relative_time"] = relative_time
+
 #: Inlined into <head> so the stored colour scheme is applied before the first
 #: paint. Served from a file rather than duplicated in the template, and read
 #: once at import because it is our own asset, not user input.
@@ -54,11 +93,18 @@ Config = Annotated[Settings, Depends(get_settings)]
 
 @router.get("/", response_class=HTMLResponse)
 def index(request: Request, conn: Conn) -> HTMLResponse:
+    """Documents split by whether they are waiting on the reviewer.
+
+    The page answers one question — what needs my attention — so the two groups
+    are separated rather than interleaved by date.
+    """
     summaries = store.list_documents(conn)
+    waiting = [s for s in summaries if s.version.status is ReviewStatus.PENDING]
+    decided = [s for s in summaries if s.version.status is not ReviewStatus.PENDING]
     return templates.TemplateResponse(
         request,
         "index.html",
-        {"summaries": summaries},
+        {"summaries": summaries, "waiting": waiting, "decided": decided},
     )
 
 

@@ -87,7 +87,36 @@ def test_index_lists_documents(api: TestClient) -> None:
 
 
 def test_index_is_empty_when_nothing_submitted(api: TestClient) -> None:
-    assert "Nothing submitted yet" in api.get("/").text
+    page = api.get("/").text
+    assert "No documents yet" in page
+    assert "mdreview submit" in page
+
+
+def test_index_shows_unresolved_counts(api: TestClient) -> None:
+    """The count is the whole point of the index: what is still outstanding."""
+    submit(api)
+    assert "open" not in api.get("/").text.split("Waiting for you")[1][:400]
+
+    for body in ("one", "two"):
+        api.post(
+            "/d/plan/v/1/comments",
+            data={"line_start": "1", "line_end": "1", "body": body},
+        )
+    assert "2 open" in api.get("/").text
+
+
+def test_index_groups_everything_waiting(api: TestClient) -> None:
+    submit(api, content="# A\n", source_name="alpha")
+    submit(api, content="# B\n", source_name="beta")
+    page = api.get("/").text
+    assert "Waiting for you" in page
+    assert "Decided" not in page  # nothing decided yet
+
+
+def test_index_says_when_nothing_is_waiting(api: TestClient) -> None:
+    submit(api)
+    api.post("/d/plan/v/1/decision", data={"status": "approved", "note": ""})
+    assert "All caught up" in api.get("/").text
 
 
 def test_static_assets_are_served(api: TestClient) -> None:

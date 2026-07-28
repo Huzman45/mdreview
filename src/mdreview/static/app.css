@@ -707,9 +707,50 @@ li.mdr-block {
 
 /* -- index -------------------------------------------------------------- */
 
-.doclist {
+.index {
   max-width: 52rem;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.docgroup-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.6rem 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--faint);
+}
+
+.docgroup-count {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.docgroup-empty {
+  margin: 0;
+  padding: 1.4rem 1.1rem;
+  font-size: 0.88rem;
+  color: var(--faint);
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+  text-align: center;
+}
+
+.doclist {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -719,9 +760,9 @@ li.mdr-block {
 
 .docrow {
   display: flex;
-  align-items: baseline;
-  gap: 0.9rem;
-  padding: 0.7rem 1.05rem;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 1.05rem;
   border-bottom: 1px solid var(--border);
   text-decoration: none;
   color: inherit;
@@ -730,28 +771,47 @@ li.mdr-block {
 .docrow:last-child { border-bottom: none; }
 .docrow:hover { background: var(--surface-sunken); }
 
-/* Fixed width: otherwise a wider status pill pushes its title further right
-   than its neighbours, and the whole column reads as ragged. */
-.docrow > .status {
-  flex: 0 0 7.5rem;
-  justify-content: center;
-}
+/* A decided document is reference, not something to act on. */
+.docrow-done .docrow-title strong { font-weight: 550; color: var(--muted); }
 
 .docrow-main {
   display: flex;
   flex-direction: column;
   min-width: 0;
   flex: 1;
-  gap: 0.05rem;
+  gap: 0.12rem;
 }
 
-.docrow-main strong {
+.docrow-title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.docrow-title strong {
   font-weight: 600;
   font-size: 0.95rem;
   letter-spacing: -0.01em;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.chip {
+  flex: 0 0 auto;
+  font-size: 0.68rem;
+  font-weight: 650;
+  padding: 0.05rem 0.42rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.chip-open {
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-color: color-mix(in srgb, var(--warn) 25%, transparent);
 }
 
 .docrow-sub {
@@ -763,6 +823,14 @@ li.mdr-block {
   font-family: var(--mono);
 }
 
+.docrow-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  flex: 0 0 auto;
+}
+
+.docrow-version,
 .docrow-date {
   font-size: 0.73rem;
   color: var(--faint);
@@ -770,20 +838,30 @@ li.mdr-block {
   font-variant-numeric: tabular-nums;
 }
 
+.docrow-date { min-width: 4.5rem; text-align: right; }
+
 .empty {
   max-width: 52rem;
   margin: 0 auto;
   color: var(--muted);
   text-align: center;
-  padding: 4.5rem 1rem;
-  font-size: 0.95rem;
+  padding: 5rem 1rem;
+  font-size: 0.92rem;
+  line-height: 2;
+}
+
+.empty-title {
+  font-size: 1.1rem;
+  font-weight: 620;
+  color: var(--text);
+  margin: 0 0 0.35rem;
 }
 
 .empty code {
   font-family: var(--mono);
   font-size: 0.85em;
   background: var(--code-bg);
-  padding: 0.14em 0.4em;
+  padding: 0.2em 0.5em;
   border-radius: 5px;
 }
 

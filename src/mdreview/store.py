@@ -220,6 +220,9 @@ def submit(
 class DocumentSummary:
     document: Document
     version: Version
+    unresolved: int = 0
+    """Open comments on the latest version — what is still outstanding."""
+    total_versions: int = 1
 
 
 def list_documents(
@@ -231,7 +234,11 @@ def list_documents(
         SELECT d.*, v.id AS v_id, v.document_id AS v_document_id, v.n AS v_n,
                v.content AS v_content, v.content_sha AS v_content_sha,
                v.status AS v_status, v.decision_note AS v_decision_note,
-               v.decided_at AS v_decided_at, v.created_at AS v_created_at
+               v.decided_at AS v_decided_at, v.created_at AS v_created_at,
+               (SELECT COUNT(*) FROM comments c
+                 WHERE c.version_id = v.id AND c.state = 'open') AS v_unresolved,
+               (SELECT COUNT(*) FROM versions vv
+                 WHERE vv.document_id = d.id) AS v_total
         FROM documents d
         JOIN versions v ON v.document_id = d.id
         WHERE v.n = (SELECT MAX(n) FROM versions WHERE document_id = d.id)
@@ -254,7 +261,14 @@ def list_documents(
         )
         if pending_only and version.status is not ReviewStatus.PENDING:
             continue
-        summaries.append(DocumentSummary(document=Document.from_row(row), version=version))
+        summaries.append(
+            DocumentSummary(
+                document=Document.from_row(row),
+                version=version,
+                unresolved=row["v_unresolved"],
+                total_versions=row["v_total"],
+            )
+        )
     return summaries
 
 
