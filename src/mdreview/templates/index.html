@@ -32,9 +32,15 @@
       Decided
       <span class="docgroup-count">{{ decided|length }}</span>
     </h2>
+    {# History reads by day; the waiting queue above deliberately does not —
+       it is an inbox, and slicing an inbox by day adds headers, not
+       orientation. #}
+    {% for label, items in decided_days %}
+    <h3 class="docgroup-day">{{ label }}</h3>
     <div class="doclist">
-      {% for item in decided %}{{ docrow(item, false, action="archive") }}{% endfor %}
+      {% for item in items %}{{ docrow(item, false, action="archive") }}{% endfor %}
     </div>
+    {% endfor %}
   </section>
   {% endif %}
 

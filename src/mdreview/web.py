@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
+from itertools import groupby
 from pathlib import Path
 from typing import Annotated
 
@@ -74,10 +75,37 @@ def relative_time(value: str | None) -> str:
     weeks = days / 7
     if weeks < 5:
         return f"{int(weeks)}w ago"
-    return when.strftime("%d %b %Y")
+    # Local, not UTC — the day headings bucket on the local clock, and a row
+    # must not contradict the heading it sits under.
+    return when.astimezone().strftime("%d %b %Y")
 
 
 templates.env.filters["relative_time"] = relative_time
+
+
+def day_of(value: str) -> date:
+    """The calendar day a stored UTC timestamp fell on, on the local clock.
+
+    This is a single-user tool running on the reviewer's machine, so the
+    server's timezone is the reviewer's; bucketing in UTC would file
+    late-evening work under the wrong day.
+    """
+    when = datetime.fromisoformat(value)
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)
+    return when.astimezone().date()
+
+
+def day_label(day: date, today: date) -> str:
+    """Today, Yesterday, then dates — relative labels age badly as headers."""
+    if day == today:
+        return "Today"
+    if day == today - timedelta(days=1):
+        return "Yesterday"
+    if day.year == today.year:
+        return f"{day.day} {day.strftime('%B')}"
+    return f"{day.day} {day.strftime('%B %Y')}"
+
 
 #: Inlined into <head> so the stored colour scheme is applied before the first
 #: paint. Served from a file rather than duplicated in the template, and read
@@ -102,6 +130,13 @@ def index(request: Request, conn: Conn) -> HTMLResponse:
     summaries = store.list_documents(conn)
     waiting = [s for s in summaries if s.version.status is ReviewStatus.PENDING]
     decided = [s for s in summaries if s.version.status is not ReviewStatus.PENDING]
+    # History is scanned by day; the waiting queue is an inbox and stays
+    # flat. `decided` is already newest-first, so groupby preserves order.
+    today = date.today()
+    decided_days = [
+        (day_label(day, today), list(items))
+        for day, items in groupby(decided, key=lambda s: day_of(s.version.created_at))
+    ]
     return templates.TemplateResponse(
         request,
         "index.html",
@@ -109,6 +144,7 @@ def index(request: Request, conn: Conn) -> HTMLResponse:
             "summaries": summaries,
             "waiting": waiting,
             "decided": decided,
+            "decided_days": decided_days,
             "archived_count": store.count_archived(conn),
         },
     )

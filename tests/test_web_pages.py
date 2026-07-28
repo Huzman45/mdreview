@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import Iterator
+from datetime import UTC, date, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
 
 from mdreview.config import Settings
 from mdreview.server import create_app
+from mdreview.web import day_label, day_of
 
 PLAN = """# Migration plan
 
@@ -103,6 +107,53 @@ def test_index_shows_open_counts(api: TestClient) -> None:
             data={"line_start": "1", "line_end": "1", "body": body},
         )
     assert "2 open" in api.get("/").text
+
+
+# -- day grouping -----------------------------------------------------------
+
+
+def test_day_label_edges() -> None:
+    today = date(2026, 7, 29)
+    assert day_label(today, today) == "Today"
+    assert day_label(today - timedelta(days=1), today) == "Yesterday"
+    assert day_label(date(2026, 7, 26), today) == "26 July"
+    assert day_label(date(2025, 12, 31), today) == "31 December 2025"
+
+
+def test_day_of_uses_the_local_clock() -> None:
+    # Whatever the local offset, converting a "now" timestamp must land on
+    # the local today — the bucketing and the label share one clock.
+    now_utc = datetime.now(UTC).isoformat(timespec="seconds")
+    assert day_of(now_utc) == date.today()
+
+
+def test_index_groups_decided_by_day(api: TestClient, db_file: Path) -> None:
+    """History reads by day, newest day first; the waiting queue stays flat."""
+    submit(api, content="# Old one\n", source_name="old-one")
+    submit(api, content="# New one\n", source_name="new-one")
+    submit(api, content="# Still waiting\n", source_name="waiting-doc")
+    api.post("/api/documents/old-one/versions/1/decision", json={"status": "approved"})
+    api.post("/api/documents/new-one/versions/1/decision", json={"status": "approved"})
+
+    # Age the first decision's version by two local days.
+    two_days = (datetime.now(UTC) - timedelta(days=2)).isoformat(timespec="seconds")
+    with sqlite3.connect(db_file) as raw:
+        raw.execute(
+            "UPDATE versions SET created_at = ? WHERE document_id ="
+            " (SELECT id FROM documents WHERE slug = 'old-one')",
+            (two_days,),
+        )
+
+    page = api.get("/").text
+    assert "Today" in page
+    decided_part = page.split("Decided")[1]
+    today_at = decided_part.index("Today")
+    older_label = day_label(date.today() - timedelta(days=2), date.today())
+    assert older_label in decided_part
+    assert today_at < decided_part.index(older_label), "newest day must come first"
+    # The waiting queue carries no day headings.
+    waiting_part = page.split("Decided")[0]
+    assert "Today" not in waiting_part.split("Waiting for you")[1]
 
 
 def test_index_groups_everything_waiting(api: TestClient) -> None:
