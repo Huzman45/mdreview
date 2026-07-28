@@ -7,7 +7,7 @@
       <span class="docrow-title">
         <strong>{{ item.document.title }}</strong>
         {% if item.unresolved %}
-          <span class="chip chip-open"
+          <span class="chip"
                 title="{{ item.unresolved }} unresolved comment{{ 's' if item.unresolved != 1 }}">
             {{ item.unresolved }} open
           </span>
@@ -20,7 +20,7 @@
 
     <span class="docrow-meta">
       {% if not waiting %}
-        <span class="status status-{{ item.version.status.value }}">{{ item.version.status.value|replace("_", " ") }}</span>
+        <span class="rule rule-{{ item.version.status.value }}">{{ item.version.status.value|replace("_", " ") }}</span>
       {% endif %}
       <span class="docrow-version">v{{ item.version.n }}{% if item.total_versions > 1 %} of {{ item.total_versions }}{% endif %}</span>
       <time class="docrow-date" datetime="{{ item.version.created_at }}"
@@ -30,6 +30,7 @@
 {% endmacro %}
 
 {% block content %}
+<article class="sheet">
 {% if not summaries %}
   <div class="empty">
     <p class="empty-title">No documents yet</p>
@@ -65,4 +66,5 @@
   {% endif %}
 </div>
 {% endif %}
+</article>
 {% endblock %}

@@ -5,13 +5,14 @@
 // every load, which is the most noticeable way to get this wrong.
 //
 // The reader's choice is one of "light", "dark" or "system". "system" is
-// resolved here to an explicit data-theme, so the stylesheet needs dark tokens
-// in exactly one place rather than duplicating them in a media query.
+// resolved here to an explicit data-theme, so the stylesheet carries the dark
+// tokens in exactly one place rather than duplicating them in a media query.
 (function () {
   "use strict";
 
   var KEY = "mdreview-theme";
   var CHOICES = ["light", "dark", "system"];
+  var PAPER = { light: "#f4f0e7", dark: "#1e1b15" };
   var media = window.matchMedia("(prefers-color-scheme: dark)");
 
   function stored() {
@@ -32,24 +33,11 @@
     var effective = resolve(choice);
     document.documentElement.setAttribute("data-theme", effective);
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute("content", effective === "dark" ? "#161a21" : "#ffffff");
+    if (meta) meta.setAttribute("content", PAPER[effective]);
     return effective;
   }
 
   apply(stored());
-
-  function set(choice) {
-    try {
-      localStorage.setItem(KEY, choice);
-    } catch (e) {
-      /* private browsing; the choice still applies for this page */
-    }
-    var effective = apply(choice);
-    sync(choice);
-    document.dispatchEvent(
-      new CustomEvent("mdr:themechange", { detail: { choice: choice, effective: effective } })
-    );
-  }
 
   function sync(choice) {
     var buttons = document.querySelectorAll("[data-theme-choice]");
@@ -59,16 +47,30 @@
     });
   }
 
+  function set(choice) {
+    try {
+      localStorage.setItem(KEY, choice);
+    } catch (e) {
+      /* private browsing; the choice still applies to this page */
+    }
+    var effective = apply(choice);
+    sync(choice);
+    document.dispatchEvent(
+      new CustomEvent("mdr:themechange", {
+        detail: { choice: choice, effective: effective },
+      })
+    );
+  }
+
   // Follow the system if that is what was chosen and it changes underneath us.
   media.addEventListener("change", function () {
-    if (stored() === "system") {
-      var effective = apply("system");
-      document.dispatchEvent(
-        new CustomEvent("mdr:themechange", {
-          detail: { choice: "system", effective: effective },
-        })
-      );
-    }
+    if (stored() !== "system") return;
+    var effective = apply("system");
+    document.dispatchEvent(
+      new CustomEvent("mdr:themechange", {
+        detail: { choice: "system", effective: effective },
+      })
+    );
   });
 
   function bind() {

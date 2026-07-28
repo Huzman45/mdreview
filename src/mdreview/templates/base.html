@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light dark">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#f4f0e7">
   <title>{% block title %}mdreview{% endblock %}</title>
   {# Inline and before the stylesheet: applying the stored scheme after render
      would flash the wrong colours on every load. #}
@@ -16,24 +16,26 @@
   {% if view == "raw" %}<script src="/static/rawlines.js" defer></script>{% endif %}
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">mdreview</a>
-    {% block topbar %}{% endblock %}
-    <div class="theme-control" role="group" aria-label="Colour scheme">
-      <button type="button" data-theme-choice="light" aria-pressed="false" title="Light">
-        <span aria-hidden="true">☀</span><span class="visually-hidden">Light</span>
-      </button>
-      <button type="button" data-theme-choice="system" aria-pressed="false" title="Follow system">
-        <span aria-hidden="true">◐</span><span class="visually-hidden">System</span>
-      </button>
-      <button type="button" data-theme-choice="dark" aria-pressed="false" title="Dark">
-        <span aria-hidden="true">☾</span><span class="visually-hidden">Dark</span>
-      </button>
-    </div>
+  {# The right-hand group lives here rather than in each page, so the status and
+     the theme control cannot end up competing for the same auto margin. #}
+  <header class="masthead">
+    <a class="masthead-brand" href="/">mdreview</a>
+    {% block masthead %}{% endblock %}
+    <span class="masthead-right">
+      {% block masthead_status %}{% endblock %}
+      <span class="theme-control" role="group" aria-label="Colour scheme">
+        <button type="button" data-theme-choice="light" aria-pressed="false" title="Light">
+          <span aria-hidden="true">☀</span><span class="visually-hidden">Light</span>
+        </button>
+        <button type="button" data-theme-choice="system" aria-pressed="false" title="Follow the system">
+          <span aria-hidden="true">◐</span><span class="visually-hidden">System</span>
+        </button>
+        <button type="button" data-theme-choice="dark" aria-pressed="false" title="Dark">
+          <span aria-hidden="true">☾</span><span class="visually-hidden">Dark</span>
+        </button>
+      </span>
+    </span>
   </header>
-  <main>
-    {% block content %}{% endblock %}
-  </main>
-  {% block scripts %}{% endblock %}
+  {% block content %}{% endblock %}
 </body>
 </html>

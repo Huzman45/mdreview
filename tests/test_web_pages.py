@@ -40,7 +40,7 @@ def test_document_page_reports_state(api: TestClient) -> None:
     submit(api, project_path="/tmp/sapphire")
     text = api.get("/d/plan").text
     assert "pending" in text
-    assert "v1" in text
+    assert "Version 1" in text
     assert "/tmp/sapphire" in text
 
 
@@ -181,28 +181,43 @@ def test_diagram_library_is_served_locally(api: TestClient) -> None:
 # -- theme ------------------------------------------------------------------
 
 
-def test_theme_control_is_present_on_every_page(api: TestClient) -> None:
+def test_the_theme_control_is_on_every_page(api: TestClient) -> None:
     submit(api)
-    for path in ("/", "/d/plan"):
+    for path in ("/", "/d/plan", "/d/plan/v/1/raw"):
         page = api.get(path).text
-        assert 'data-theme-choice="light"' in page
-        assert 'data-theme-choice="dark"' in page
-        assert 'data-theme-choice="system"' in page
+        for choice in ("light", "system", "dark"):
+            assert f'data-theme-choice="{choice}"' in page, (path, choice)
 
 
-def test_theme_script_is_inlined_before_the_stylesheet(api: TestClient) -> None:
-    """Applying the stored scheme after paint would flash the wrong colours."""
+def test_the_theme_script_runs_before_the_stylesheet(api: TestClient) -> None:
+    """Applying a stored scheme after paint flashes the wrong colours."""
     page = api.get("/").text
     assert "mdreview-theme" in page
     assert page.index("mdreview-theme") < page.index('href="/static/app.css"')
 
 
-def test_stylesheet_defines_dark_tokens_once(api: TestClient) -> None:
-    """Dark tokens in both a media query and an attribute selector can drift."""
+def test_dark_tokens_are_defined_once(api: TestClient) -> None:
+    """Defining them in a media query as well as an attribute selector gives
+    two copies that drift apart."""
     css = api.get("/static/app.css").text
-    assert css.count("--surface-sunken: #1c212a") == 1
+    assert css.count("--paper: #16140f") == 1
     assert ':root[data-theme="dark"]' in css
-    assert "prefers-color-scheme: dark" not in css
+    # The at-rule, not the words: the comment above the palette names it.
+    assert "@media (prefers-color-scheme" not in css
+
+
+def test_every_colour_is_a_token(api: TestClient) -> None:
+    """A literal colour outside the palette blocks cannot follow the theme, so
+    it would silently stay light when the rest of the page goes dark."""
+    import re
+
+    css = api.get("/static/app.css").text
+    palette_end = css.index("* { box-sizing: border-box; }")
+    body = css[palette_end:]
+    assert not re.findall(r"#[0-9a-fA-F]{3,8}\b", body)
+
+
+# -- design ----------------------------------------------------------------
 
 
 def test_task_items_are_not_flex_containers(api: TestClient) -> None:

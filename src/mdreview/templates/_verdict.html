@@ -1,0 +1,28 @@
+{# The single action, directly under the colophon rather than off in a rail.
+
+   The prototype pointed this form at the margin and left itself untouched, so
+   the Approve buttons stayed on screen after a decision was recorded. It is
+   swapped out of band from the same response instead: the rendered markup is
+   unchanged, only the staleness is fixed. #}
+<div class="verdict-slot" id="verdict"{% if oob %} hx-swap-oob="true"{% endif %}>
+  {% if version.status.value == "pending" and is_latest %}
+    <form class="verdict"
+          hx-post="/d/{{ slug }}/v/{{ version.n }}/decision"
+          hx-target="#sidebar" hx-swap="outerHTML">
+      <input class="verdict-note" name="note" placeholder="Add a note, or just decide…">
+      <button type="submit" name="status" value="approved" class="verdict-yes">Approve</button>
+      <button type="submit" name="status" value="changes_requested" class="verdict-no">Request changes</button>
+    </form>
+    {% if decision_error %}<p class="verdict-error">{{ decision_error }}</p>{% endif %}
+  {% elif version.status.value != "pending" %}
+    <p class="verdict verdict-done">
+      <span class="rule rule-{{ version.status.value }}">{{ version.status.value|replace("_"," ") }}</span>
+      {% if version.decision_note %}<em>{{ version.decision_note }}</em>{% endif %}
+    </p>
+  {% else %}
+    <p class="verdict verdict-done">
+      <span class="rule rule-cancelled">superseded</span>
+      <em>Decisions are recorded on the latest version.</em>
+    </p>
+  {% endif %}
+</div>

@@ -153,15 +153,34 @@ def test_nothing_is_wider_than_the_screen(
         context.close()
 
 
-def test_the_theme_applies_before_paint(browser, live: str) -> None:
-    """A stored preference read after render flashes the wrong colours."""
+def test_the_theme_applies_before_first_paint(browser, live: str) -> None:
+    """A stored preference read after render flashes the wrong colours, which
+    is the most visible way to get a theme toggle wrong."""
     context = browser.new_context(viewport={"width": 834, "height": 1194})
     try:
         page = context.new_page()
         page.add_init_script(
             "try { localStorage.setItem('mdreview-theme', 'dark'); } catch (e) {}"
         )
+        # `commit` returns as soon as the document starts, before load events.
         page.goto(live + "/d/doc", wait_until="commit")
+        assert page.get_attribute("html", "data-theme") == "dark"
+    finally:
+        context.close()
+
+
+def test_dark_actually_repaints_the_page(browser, live: str) -> None:
+    """The attribute alone proves nothing if no rule hangs off it."""
+    context = browser.new_context(viewport={"width": 1194, "height": 834})
+    try:
+        page = context.new_page()
+        page.goto(live + "/d/doc", wait_until="domcontentloaded")
+        page.wait_for_timeout(300)
+        light = page.evaluate("() => getComputedStyle(document.body).backgroundColor")
+        page.evaluate("() => window.mdrTheme.set('dark')")
+        page.wait_for_timeout(300)
+        dark = page.evaluate("() => getComputedStyle(document.body).backgroundColor")
+        assert light != dark, "the palette did not change"
         assert page.get_attribute("html", "data-theme") == "dark"
     finally:
         context.close()

@@ -34,8 +34,6 @@ SIZES = [
     ("desktop", 1440, 900),
 ]
 
-THEMES = ("light", "dark")
-
 
 def capture(
     base: str, out: Path, slug: str, version: int, previous: int
@@ -46,19 +44,18 @@ def capture(
     with sync_playwright() as p:
         browser = p.chromium.launch()
         try:
-            for theme in THEMES:
+            for theme in ("light", "dark"):
                 for size_name, width, height in SIZES:
                     context = browser.new_context(
                         viewport={"width": width, "height": height},
                         device_scale_factor=2,
                     )
                     page = context.new_page()
-                    # Seed the stored preference before any page script runs.
-                    seed = (
+                    # Seed the choice before any page script runs.
+                    page.add_init_script(
                         "try { localStorage.setItem('mdreview-theme', "
                         f"'{theme}'); }} catch (e) {{}}"
                     )
-                    page.add_init_script(seed)
                     for view_name, template in VIEWS:
                         path = template.format(slug=slug, version=version, previous=previous)
                         page.goto(base + path, wait_until="domcontentloaded")

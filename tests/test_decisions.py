@@ -193,7 +193,7 @@ def test_page_offers_a_decision_while_pending(api: TestClient) -> None:
 def test_form_approves(api: TestClient) -> None:
     api.post("/api/documents", json={"content": PLAN, "source_name": "plan"})
     response = api.post("/d/plan/v/1/decision", data={"status": "approved", "note": ""})
-    assert "status-approved" in response.text
+    assert "rule-approved" in response.text
     assert "Approve" not in response.text
 
 
@@ -211,7 +211,7 @@ def test_form_requests_changes_with_a_note(api: TestClient) -> None:
         "/d/plan/v/1/decision",
         data={"status": "changes_requested", "note": "start over"},
     )
-    assert "status-changes_requested" in response.text
+    assert "rule-changes_requested" in response.text
     assert "start over" in response.text
 
 
@@ -245,7 +245,7 @@ def test_index_distinguishes_pending_from_decided(api: TestClient) -> None:
     page = api.get("/").text
     assert "Waiting for you" in page
     assert "Decided" in page
-    assert "status-approved" in page
+    assert "rule-approved" in page
 
     waiting, decided = page.split("Decided", 1)
     # beta is still awaiting review; alpha has been decided.

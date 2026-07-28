@@ -55,7 +55,7 @@
 
     var block = blockOf(event.target);
     if (!block) {
-      if (!event.target.closest(".comment-panel")) clear();
+      if (!event.target.closest(".margin")) clear();
       return;
     }
     // The innermost block wins, so a nested list item beats its parent.
@@ -90,7 +90,7 @@
     return r.start === r.end ? "Line " + r.start : "Lines " + r.start + "–" + r.end;
   }
 
-  // On a phone the sidebar sits below the document, so a selected block leaves
+  // On a phone the margin sits below the document, so a selected block leaves
   // the comment box off-screen. Bring it into view instead of focusing it,
   // because focusing alone would scroll abruptly and open the keyboard over
   // the text being commented on.

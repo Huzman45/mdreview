@@ -21,12 +21,38 @@
     return code ? code.textContent : "";
   }
 
-  function isDark() {
-    return (
-      document.documentElement.getAttribute("data-theme") === "dark" ||
-      (!document.documentElement.getAttribute("data-theme") &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches)
-    );
+  // Stock mermaid blue is pasted-on against warm paper, so the diagram takes
+  // the same palette as the prose around it.
+  //
+  // The colours are read from the stylesheet's own custom properties rather
+  // than repeated here, so a diagram cannot drift from the page it sits in and
+  // the dark palette needs no second copy in JavaScript.
+  function token(name) {
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue(name)
+      .trim();
+  }
+
+  function settings() {
+    return {
+      startOnLoad: false,
+      // strict sanitises markup in labels: diagram source is agent-authored
+      // and therefore untrusted, exactly like the surrounding prose.
+      securityLevel: "strict",
+      theme: "base",
+      themeVariables: {
+        background: token("--paper-2"),
+        primaryColor: token("--wash"),
+        primaryBorderColor: token("--rule"),
+        primaryTextColor: token("--ink"),
+        secondaryColor: token("--select"),
+        tertiaryColor: token("--paper"),
+        lineColor: token("--accent"),
+        fontFamily:
+          "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, sans-serif",
+        fontSize: "14px",
+      },
+    };
   }
 
   function load() {
@@ -85,13 +111,7 @@
 
     load()
       .then(function () {
-        // strict sanitises markup in labels: diagram source is agent-authored
-        // and therefore untrusted, exactly like the surrounding prose.
-        window.mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: "strict",
-          theme: isDark() ? "dark" : "default",
-        });
+        window.mermaid.initialize(settings());
         return Promise.all(found.map(renderInto));
       })
       .catch(function () {
@@ -107,14 +127,11 @@
     renderAll();
   }
 
-  // A diagram drawn for the other colour scheme is unreadable, so re-render.
+  // A diagram drawn for the other scheme keeps its old fills, so it has to be
+  // drawn again rather than merely restyled.
   document.addEventListener("mdr:themechange", function () {
     if (!window.mermaid || !blocks().length) return;
-    window.mermaid.initialize({
-      startOnLoad: false,
-      securityLevel: "strict",
-      theme: isDark() ? "dark" : "default",
-    });
+    window.mermaid.initialize(settings());
     blocks().forEach(renderInto);
   });
 })();

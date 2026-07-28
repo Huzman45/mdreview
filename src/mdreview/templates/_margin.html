@@ -1,0 +1,41 @@
+{# Margin notes, keyed to the block they annotate.
+
+   Comment bodies and quoted source are escaped plain text — never parsed as
+   markdown, so a comment cannot inject markup.
+
+   Keeps id="sidebar" because that is the htmx swap target every POST handler
+   already returns. The new-note form sits after the existing notes, as in the
+   prototype. #}
+<aside class="margin" id="sidebar">
+  {% for c in comments %}
+  <div class="note note-{{ c.state.value }}" data-ref="{{ c.ref }}"
+       data-line-start="{{ c.line_start }}" data-line-end="{{ c.line_end }}">
+    <div class="note-head">
+      <span class="note-ref">{{ c.ref }}</span>
+      L{{ c.line_start }}{% if c.line_end != c.line_start %}–{{ c.line_end }}{% endif %}
+      {% if c.state.value != "open" %} · {{ c.state.value }}{% endif %}
+    </div>
+    <pre class="note-quote">{{ c.quoted }}</pre>
+    <p class="note-body">{{ c.body }}</p>
+    {% if c.state.value == "open" and can_edit %}
+    <form hx-post="/d/{{ slug }}/v/{{ version.n }}/comments/{{ c.ref }}/resolve"
+          hx-target="#sidebar" hx-swap="outerHTML">
+      <button class="link-button" type="submit">Resolve</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endfor %}
+
+  {% if can_edit %}
+  <form class="note note-new" id="comment-panel"
+        hx-post="/d/{{ slug }}/v/{{ version.n }}/comments"
+        hx-target="#sidebar" hx-swap="outerHTML">
+    <div class="note-head"><span id="selection-label" class="selection-label">Select a block</span></div>
+    <input type="hidden" name="line_start" id="line_start" value="">
+    <input type="hidden" name="line_end" id="line_end" value="">
+    <textarea name="body" id="comment-body" rows="2" placeholder="Annotate…" disabled></textarea>
+    {% if error %}<p class="note-error">{{ error }}</p>{% endif %}
+    <button type="submit" id="comment-submit" disabled>Add note</button>
+  </form>
+  {% endif %}
+</aside>

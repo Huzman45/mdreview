@@ -1,0 +1,45 @@
+{# Variant A's colophon: metadata on the left, navigation as plain links on the
+   right. Version switching lives here too rather than in a separate pill row —
+   the prototype has no nav row and adding one changes the page's character. #}
+<div class="colophon">
+  <span>Version {{ version.n }}{% if versions|length > 1 %} of {{ versions|length }}{% endif %}</span>
+  {% if not is_latest %}<span class="colophon-dot">·</span><span>superseded</span>{% endif %}
+  <span class="colophon-dot">·</span>
+  <span>{{ comments|length }} comment{{ 's' if comments|length != 1 }}</span>
+
+  {% if versions|length > 1 %}
+    <span class="colophon-dot">·</span>
+    <span class="colophon-versions">
+      <span class="colophon-label">versions</span>
+      {% for n in versions %}
+        {% if n == version.n %}
+          <span class="current">{{ n }}</span>
+        {% else %}
+          <a href="/d/{{ document.slug }}/v/{{ n }}{{ '/raw' if view == 'raw' }}">{{ n }}</a>
+        {% endif %}
+      {% endfor %}
+    </span>
+  {% endif %}
+
+  <span class="colophon-links">
+    {% if view == "rendered" %}
+      <span class="current">rendered</span>
+    {% else %}
+      <a href="/d/{{ document.slug }}/v/{{ version.n }}">rendered</a>
+    {% endif %}
+
+    {% if view == "raw" %}
+      <span class="current">source</span>
+    {% else %}
+      <a href="/d/{{ document.slug }}/v/{{ version.n }}/raw">source</a>
+    {% endif %}
+
+    {% if previous_version %}
+      {% if view == "diff" %}
+        <span class="current">changes</span>
+      {% else %}
+        <a href="/d/{{ document.slug }}/diff/{{ previous_version }}/{{ version.n }}">changes</a>
+      {% endif %}
+    {% endif %}
+  </span>
+</div>

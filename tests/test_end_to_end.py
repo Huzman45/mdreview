@@ -125,7 +125,7 @@ def test_the_agent_and_the_human_complete_a_review_together(live: Harness) -> No
     decided = live.browser_post(
         "/d/plan/v/1/decision", {"status": "changes_requested", "note": ""}
     )
-    assert "status-changes_requested" in decided.text
+    assert "rule-changes_requested" in decided.text
 
     # 5. The agent reads the outcome, with the source it refers to.
     review = live.cli("review", "plan")
@@ -146,7 +146,7 @@ def test_the_agent_and_the_human_complete_a_review_together(live: Harness) -> No
     approved = live.browser_post(
         "/d/plan/v/2/decision", {"status": "approved", "note": "good now"}
     )
-    assert "status-approved" in approved.text
+    assert "rule-approved" in approved.text
 
     # 8. The agent proceeds.
     final = live.cli("review", "plan")
@@ -185,7 +185,7 @@ def test_a_retried_submit_does_not_discard_review_work(live: Harness) -> None:
 
     page = live.page("/d/plan")
     assert "half-written thought" in page
-    assert "comment-outdated" not in page
+    assert "note-outdated" not in page
 
 
 FENCED_PLAN = """# Cutover
@@ -250,7 +250,7 @@ def test_a_review_driven_from_the_source_and_diff_views(live: Harness) -> None:
 
     # The agent resolved it before resubmitting, so it stays resolved rather
     # than being swept to outdated along with anything left open.
-    assert "comment-resolved" in live.page("/d/cutover/v/1")
+    assert "note-resolved" in live.page("/d/cutover/v/1")
 
     # The diff shows precisely what changed, without re-reading the document.
     diff = live.page("/d/cutover/diff/1/2")
