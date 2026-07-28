@@ -1,0 +1,18 @@
+{# Title, provenance and navigation. The document's own heading is the headline;
+   this is the colophon above it. #}
+<header class="dochead">
+  <div class="colophon">
+    <span class="colophon-status status status-{{ version.status.value }}">{{ version.status.value|replace("_", " ") }}</span>
+    <span>Version {{ version.n }}{% if versions|length > 1 %} of {{ versions|length }}{% endif %}</span>
+    {% if document.project_path %}
+      <span class="colophon-dot">·</span>
+      <span class="colophon-path" title="{{ document.project_path }}">{{ document.project_path | display_path }}</span>
+    {% endif %}
+    <span class="colophon-spacer"></span>
+    <span class="colophon-when">{{ version.created_at | relative_time }}</span>
+  </div>
+
+  {% if not suppress_title %}<h1 class="doc-title">{{ document.title }}</h1>{% endif %}
+
+  {% include "_viewnav.html" %}
+</header>

@@ -1,0 +1,6 @@
+{# Response to a comment or decision post.
+   The margin is the swap target. The verdict is not adjacent to it in the DOM, so
+   it is updated out of band from the same response rather than duplicated here. #}
+{% include "_margin.html" %}
+{% set oob = true %}
+{% include "_verdict.html" %}

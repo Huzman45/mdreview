@@ -343,3 +343,31 @@ def test_markup_in_diagram_source_is_escaped() -> None:
     html = render.render('```mermaid\nA["<script>alert(1)</script>"]\n```\n').html
     assert "<script>alert(1)</script>" not in html
     assert "&lt;script&gt;" in html
+
+
+# -- leading heading --------------------------------------------------------
+
+
+def test_a_leading_h1_is_reported() -> None:
+    """Lets the page avoid two headlines without dropping the heading from the
+    commentable blocks."""
+    assert render.render("# My Plan\n\nBody\n").leading_heading == "My Plan"
+
+
+def test_a_leading_h2_is_not_a_title() -> None:
+    assert render.render("## Sub\n\nBody\n").leading_heading is None
+
+
+def test_a_heading_after_prose_is_not_leading() -> None:
+    assert render.render("Intro\n\n# Later\n").leading_heading is None
+
+
+def test_no_content_has_no_leading_heading() -> None:
+    assert render.render("").leading_heading is None
+
+
+def test_the_leading_heading_is_still_a_commentable_block() -> None:
+    result = render.render("# My Plan\n\nBody\n")
+    assert result.leading_heading == "My Plan"
+    assert result.blocks[0].kind == "heading_open"
+    assert (result.blocks[0].line_start, result.blocks[0].line_end) == (1, 1)

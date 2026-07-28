@@ -21,6 +21,43 @@
     return code ? code.textContent : "";
   }
 
+  // Stock mermaid blue looks pasted-on against warm paper, so the diagram is
+  // themed from the same palette as the prose around it.
+  var PALETTE = {
+    light: {
+      background: "#f5f1e8",
+      primaryColor: "#efe9db",
+      primaryBorderColor: "#cdc4b0",
+      primaryTextColor: "#23201b",
+      lineColor: "#8f8776",
+      secondaryColor: "#f0e8d6",
+      tertiaryColor: "#fbf9f4",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    },
+    dark: {
+      background: "#1d1a14",
+      primaryColor: "#26221a",
+      primaryBorderColor: "#453e30",
+      primaryTextColor: "#ece5d6",
+      lineColor: "#857c6b",
+      secondaryColor: "#2c2418",
+      tertiaryColor: "#16140f",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    },
+  };
+
+  function settings() {
+    var dark = isDark();
+    return {
+      startOnLoad: false,
+      // strict sanitises markup in labels: diagram source is agent-authored and
+      // therefore untrusted, exactly like the surrounding prose.
+      securityLevel: "strict",
+      theme: "base",
+      themeVariables: dark ? PALETTE.dark : PALETTE.light,
+    };
+  }
+
   function isDark() {
     return (
       document.documentElement.getAttribute("data-theme") === "dark" ||
@@ -87,11 +124,7 @@
       .then(function () {
         // strict sanitises markup in labels: diagram source is agent-authored
         // and therefore untrusted, exactly like the surrounding prose.
-        window.mermaid.initialize({
-          startOnLoad: false,
-          securityLevel: "strict",
-          theme: isDark() ? "dark" : "default",
-        });
+        window.mermaid.initialize(settings());
         return Promise.all(found.map(renderInto));
       })
       .catch(function () {
@@ -110,11 +143,7 @@
   // A diagram drawn for the other colour scheme is unreadable, so re-render.
   document.addEventListener("mdr:themechange", function () {
     if (!window.mermaid || !blocks().length) return;
-    window.mermaid.initialize({
-      startOnLoad: false,
-      securityLevel: "strict",
-      theme: isDark() ? "dark" : "default",
-    });
+    window.mermaid.initialize(settings());
     blocks().forEach(renderInto);
   });
 })();

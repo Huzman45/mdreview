@@ -79,6 +79,12 @@ class Rendered:
     blocks: tuple[Block, ...]
     has_diagrams: bool = False
     """True when the page must load the diagram library, which is megabytes."""
+    leading_heading: str | None = None
+    """Text of a level-1 heading opening the document, if it has one.
+
+    Lets the page avoid printing the title twice, without suppressing the
+    heading itself — which would remove it from the commentable blocks.
+    """
 
 
 def _validate_link(url: str) -> bool:
@@ -169,6 +175,7 @@ def render(content: str, *, parser: MarkdownIt | None = None) -> Rendered:
 
     blocks: list[Block] = []
     has_diagrams = any(diagram_language(token) is not None for token in tokens)
+    leading_heading = _leading_heading(tokens)
 
     for token in tokens:
         if not _is_anchor(token):
@@ -190,7 +197,26 @@ def render(content: str, *, parser: MarkdownIt | None = None) -> Rendered:
         )
 
     html = md.renderer.render(tokens, md.options, {})
-    return Rendered(html=html, blocks=tuple(blocks), has_diagrams=has_diagrams)
+    return Rendered(
+        html=html,
+        blocks=tuple(blocks),
+        has_diagrams=has_diagrams,
+        leading_heading=leading_heading,
+    )
+
+
+def _leading_heading(tokens: list[Token]) -> str | None:
+    """The text of an ``h1`` that opens the document, if one does."""
+    for index, token in enumerate(tokens):
+        if token.type != "heading_open":
+            return None
+        if token.tag != "h1":
+            return None
+        following = tokens[index + 1] if index + 1 < len(tokens) else None
+        if following is not None and following.type == "inline":
+            return (following.content or "").strip() or None
+        return None
+    return None
 
 
 def line_count(content: str) -> int:

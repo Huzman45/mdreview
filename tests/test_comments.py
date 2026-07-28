@@ -294,7 +294,7 @@ def test_form_resolves_a_comment(api: TestClient) -> None:
     api.post("/api/documents", json={"content": PLAN, "source_name": "plan"})
     api.post("/d/plan/v/1/comments", data={"line_start": "1", "line_end": "1", "body": "x"})
     response = api.post("/d/plan/v/1/comments/C1/resolve")
-    assert "comment-resolved" in response.text
+    assert "note-resolved" in response.text
 
 
 def test_comment_markup_is_escaped_on_the_page(api: TestClient) -> None:

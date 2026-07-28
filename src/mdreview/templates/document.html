@@ -1,32 +1,20 @@
 {% extends "base.html" %}
 {% block title %}{{ document.title }} — mdreview{% endblock %}
 
-{% block topbar %}
-  <div class="meta">
-    <span class="status status-{{ version.status.value }}">{{ version.status.value|replace("_", " ") }}</span>
-    <span class="version">v{{ version.n }}{% if not is_latest %} (superseded){% endif %}</span>
-    {% if document.project_path %}<span class="project" title="{{ document.project_path }}">{{ document.project_path | display_path }}</span>{% endif %}
-  </div>
-{% endblock %}
-
 {% block content %}
-<div class="layout">
-<article class="document">
-  <h1 class="doc-title">{{ document.title }}</h1>
+<article class="sheet">
+  {% include "_dochead.html" %}
+  {% include "_verdict.html" %}
 
-  {% include "_viewnav.html" %}
-
-  {#
-    `body` is the only unescaped value in this project. It is safe because
-    render.py parses with html=False, so any markup embedded in the untrusted
-    document is emitted as text, and link targets are filtered to an
-    allow-list. Never pass unrendered user input through this filter.
-  #}
-  <div class="rendered" id="rendered">
-    {{ body|safe }}
+  <div class="prose-wrap">
+    {#
+      `body` is the only unescaped value in this project. It is safe because
+      render.py parses with html=False, so markup embedded in the untrusted
+      document is emitted as text, and link targets are filtered to an
+      allow-list. Never pass unrendered user input through this filter.
+    #}
+    <div class="prose" id="rendered">{{ body|safe }}</div>
+    {% include "_margin.html" %}
   </div>
 </article>
-
-{% include "_sidebar.html" %}
-</div>
 {% endblock %}
