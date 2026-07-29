@@ -1,12 +1,17 @@
 // Block selection.
 //
 // Every addressable block carries data-line-start / data-line-end, written by
-// render.py from markdown-it's token.map. Clicking one selects it; the line
-// range is what a comment is anchored to.
+// render.py from markdown-it's token.map. Clicking one selects it; shift-click
+// extends the selection to a contiguous run of blocks, the same gesture the
+// source view uses for lines. The line range is what a comment is anchored to.
 (function () {
   "use strict";
 
-  var selected = null;
+  // The anchor is the block a plain click chose; the range is what the
+  // comment will cover. Shift-click grows or shrinks the range around the
+  // anchor rather than the range creeping with every click.
+  var anchor = null;
+  var current = null;
 
   function blockOf(target) {
     var el = target.closest(".mdr-block");
@@ -20,25 +25,70 @@
     };
   }
 
+  // Paint every block the span fully covers, except where an ancestor is
+  // already painted: tinting both a list and its items would double-shade
+  // the items and read as a heavier, different selection.
+  function paint() {
+    var covered = [];
+    document.querySelectorAll(".mdr-block").forEach(function (el) {
+      var r = range(el);
+      if (current && r.start >= current.start && r.end <= current.end) {
+        covered.push(el);
+      } else {
+        el.classList.remove("selected");
+      }
+    });
+    covered.forEach(function (el) {
+      var parent = el.parentElement && el.parentElement.closest(".mdr-block");
+      var parentCovered = false;
+      while (parent) {
+        var pr = range(parent);
+        if (pr.start >= current.start && pr.end <= current.end) {
+          parentCovered = true;
+          break;
+        }
+        parent = parent.parentElement && parent.parentElement.closest(".mdr-block");
+      }
+      el.classList.toggle("selected", !parentCovered);
+    });
+  }
+
   function clear() {
-    if (selected) {
-      selected.classList.remove("selected");
-      selected = null;
-    }
+    anchor = null;
+    current = null;
+    document.querySelectorAll(".mdr-block.selected").forEach(function (el) {
+      el.classList.remove("selected");
+    });
     document.dispatchEvent(new CustomEvent("mdr:deselected"));
   }
 
+  function announce() {
+    document.dispatchEvent(
+      new CustomEvent("mdr:selected", { detail: { element: anchor, range: current } })
+    );
+  }
+
   function select(el) {
-    if (selected === el) {
+    // Plain-clicking the sole selected block toggles it off, as before.
+    var r = range(el);
+    var soleSelection =
+      anchor === el && current && current.start === r.start && current.end === r.end;
+    if (soleSelection) {
       clear();
       return;
     }
-    if (selected) selected.classList.remove("selected");
-    selected = el;
-    el.classList.add("selected");
-    document.dispatchEvent(
-      new CustomEvent("mdr:selected", { detail: { element: el, range: range(el) } })
-    );
+    anchor = el;
+    current = r;
+    paint();
+    announce();
+  }
+
+  function extend(el) {
+    var a = range(anchor);
+    var b = range(el);
+    current = { start: Math.min(a.start, b.start), end: Math.max(a.end, b.end) };
+    paint();
+    announce();
   }
 
   // The source view has its own line-based selection and no blocks at all.
@@ -60,7 +110,17 @@
     }
     // The innermost block wins, so a nested list item beats its parent.
     event.stopPropagation();
-    select(block);
+    if (event.shiftKey && anchor !== null) {
+      extend(block);
+    } else {
+      select(block);
+    }
+  });
+
+  // Shift-clicking otherwise extends the browser's text selection as well,
+  // which looks broken. Same suppression as the source view.
+  document.addEventListener("mousedown", function (event) {
+    if (event.shiftKey && event.target.closest(".mdr-block")) event.preventDefault();
   });
 
   document.addEventListener("keydown", function (event) {
@@ -69,7 +129,7 @@
 
   window.mdrSelection = {
     current: function () {
-      return selected ? range(selected) : null;
+      return current;
     },
     clear: clear,
   };
