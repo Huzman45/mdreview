@@ -1,0 +1,46 @@
+{# One index row: a link wrapped with its row action, because a button inside
+   an anchor is invalid HTML and mis-clickable. The action posts a plain form
+   and the server redirects back to the list — no script involved.
+
+   On the archived listing the row shows when the document was put away, which
+   is the question that page answers; everywhere else it shows the version's
+   age. #}
+{% macro docrow(item, waiting, action=none) %}
+  <div class="docrow {% if not waiting %}docrow-done{% endif %}">
+    <a class="docrow-link" href="/d/{{ item.document.slug }}">
+      <span class="docrow-main">
+        <span class="docrow-title">
+          <strong>{{ item.document.title }}</strong>
+          {% if item.open_count %}
+            <span class="chip"
+                  title="{{ item.open_count }} open comment{{ 's' if item.open_count != 1 }}">
+              {{ item.open_count }} open
+            </span>
+          {% endif %}
+        </span>
+        <span class="docrow-sub">
+          {% if item.document.project_path %}{{ item.document.project_path | display_path }}{% else %}{{ item.document.slug }}{% endif %}
+        </span>
+      </span>
+
+      <span class="docrow-meta">
+        {% if not waiting %}
+          <span class="rule rule-{{ item.version.status.value }}">{{ item.version.status.value|replace("_", " ") }}</span>
+        {% endif %}
+        <span class="docrow-version">v{{ item.version.n }}{% if item.total_versions > 1 %} of {{ item.total_versions }}{% endif %}</span>
+        {% set when = item.document.archived_at if action == "restore" else item.version.created_at %}
+        <time class="docrow-date" datetime="{{ when }}" title="{{ when }}">{{ when | relative_time }}</time>
+      </span>
+    </a>
+
+    {% if action == "archive" %}
+    <form class="docrow-action" method="post" action="/d/{{ item.document.slug }}/archive">
+      <button type="submit" title="Put away — leaves the index, stays readable">Archive</button>
+    </form>
+    {% elif action == "restore" %}
+    <form class="docrow-action" method="post" action="/d/{{ item.document.slug }}/unarchive">
+      <button type="submit" title="Return to the index">Restore</button>
+    </form>
+    {% endif %}
+  </div>
+{% endmacro %}

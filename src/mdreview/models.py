@@ -38,6 +38,11 @@ class Document:
     project_path: str | None
     session_id: str | None
     created_at: str
+    archived_at: str | None = None
+
+    @property
+    def is_archived(self) -> bool:
+        return self.archived_at is not None
 
     @classmethod
     def from_row(cls, row: sqlite3.Row) -> Document:
@@ -48,6 +53,7 @@ class Document:
             project_path=row["project_path"],
             session_id=row["session_id"],
             created_at=row["created_at"],
+            archived_at=row["archived_at"],
         )
 
 

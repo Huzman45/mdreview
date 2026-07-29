@@ -1,37 +1,10 @@
 {% extends "base.html" %}
+{% from "_docrow.html" import docrow %}
 {% block title %}mdreview{% endblock %}
-
-{% macro docrow(item, waiting) %}
-  <a class="docrow {% if not waiting %}docrow-done{% endif %}" href="/d/{{ item.document.slug }}">
-    <span class="docrow-main">
-      <span class="docrow-title">
-        <strong>{{ item.document.title }}</strong>
-        {% if item.open_count %}
-          <span class="chip"
-                title="{{ item.open_count }} open comment{{ 's' if item.open_count != 1 }}">
-            {{ item.open_count }} open
-          </span>
-        {% endif %}
-      </span>
-      <span class="docrow-sub">
-        {% if item.document.project_path %}{{ item.document.project_path | display_path }}{% else %}{{ item.document.slug }}{% endif %}
-      </span>
-    </span>
-
-    <span class="docrow-meta">
-      {% if not waiting %}
-        <span class="rule rule-{{ item.version.status.value }}">{{ item.version.status.value|replace("_", " ") }}</span>
-      {% endif %}
-      <span class="docrow-version">v{{ item.version.n }}{% if item.total_versions > 1 %} of {{ item.total_versions }}{% endif %}</span>
-      <time class="docrow-date" datetime="{{ item.version.created_at }}"
-            title="{{ item.version.created_at }}">{{ item.version.created_at | relative_time }}</time>
-    </span>
-  </a>
-{% endmacro %}
 
 {% block content %}
 <article class="sheet">
-{% if not summaries %}
+{% if not summaries and not archived_count %}
   <div class="empty">
     <p class="empty-title">No documents yet</p>
     <p>Publish one for review with</p>
@@ -46,7 +19,7 @@
     </h2>
     {% if waiting %}
       <div class="doclist">
-        {% for item in waiting %}{{ docrow(item, true) }}{% endfor %}
+        {% for item in waiting %}{{ docrow(item, true, action="archive") }}{% endfor %}
       </div>
     {% else %}
       <p class="docgroup-empty">Nothing to review. All caught up.</p>
@@ -60,9 +33,15 @@
       <span class="docgroup-count">{{ decided|length }}</span>
     </h2>
     <div class="doclist">
-      {% for item in decided %}{{ docrow(item, false) }}{% endfor %}
+      {% for item in decided %}{{ docrow(item, false, action="archive") }}{% endfor %}
     </div>
   </section>
+  {% endif %}
+
+  {% if archived_count %}
+  <p class="index-foot">
+    <a href="/archived">{{ archived_count }} archived</a>
+  </p>
   {% endif %}
 </div>
 {% endif %}

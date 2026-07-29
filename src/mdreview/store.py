@@ -183,8 +183,11 @@ def submit(
                 session_id=session_id,
             )
         else:
+            # A new round must be visible where the reviewer looks, so a
+            # submission also reactivates an archived document.
             conn.execute(
-                "UPDATE documents SET title = ?, project_path = ?, session_id = ? WHERE id = ?",
+                "UPDATE documents SET title = ?, project_path = ?, session_id = ?,"
+                " archived_at = NULL WHERE id = ?",
                 (resolved_title, project_path, session_id, document.id),
             )
             document = require_document(conn, document.slug)
@@ -226,11 +229,16 @@ class DocumentSummary:
 
 
 def list_documents(
-    conn: sqlite3.Connection, *, pending_only: bool = False
+    conn: sqlite3.Connection, *, pending_only: bool = False, archived: bool = False
 ) -> list[DocumentSummary]:
-    """Every document with its latest version, newest first."""
+    """Documents with their latest version, newest first.
+
+    Active documents by default; ``archived=True`` lists the shelf instead.
+    The two are never mixed — the index and the archived listing are
+    different questions.
+    """
     rows = conn.execute(
-        """
+        f"""
         SELECT d.*, v.id AS v_id, v.document_id AS v_document_id, v.n AS v_n,
                v.content AS v_content, v.content_sha AS v_content_sha,
                v.status AS v_status, v.decision_note AS v_decision_note,
@@ -242,6 +250,7 @@ def list_documents(
         FROM documents d
         JOIN versions v ON v.document_id = d.id
         WHERE v.n = (SELECT MAX(n) FROM versions WHERE document_id = d.id)
+          AND d.archived_at IS {"NOT NULL" if archived else "NULL"}
         ORDER BY v.created_at DESC, d.id DESC
         """
     ).fetchall()
@@ -270,6 +279,49 @@ def list_documents(
             )
         )
     return summaries
+
+
+# -- lifecycle --------------------------------------------------------------
+
+
+ARCHIVE_NOTE = "archived without review"
+
+
+def archive_document(conn: sqlite3.Connection, slug: str) -> Document:
+    """Shelve a document: off the index, pages intact.
+
+    A pending latest round is cancelled in the same transaction — otherwise an
+    agent reading the outcome would poll "still outstanding" for a review
+    nobody will do. Decided rounds are history and stay untouched.
+    """
+    document = require_document(conn, slug)
+    if document.is_archived:
+        return document
+    with transaction(conn):
+        current = latest_version(conn, document.id)
+        if current is not None and current.status is ReviewStatus.PENDING:
+            decide(conn, version=current, status=ReviewStatus.CANCELLED, note=ARCHIVE_NOTE)
+        conn.execute("UPDATE documents SET archived_at = ? WHERE id = ?", (now(), document.id))
+    return require_document(conn, slug)
+
+
+def unarchive_document(conn: sqlite3.Connection, slug: str) -> Document:
+    """Put a document back on the index, exactly as it was left."""
+    document = require_document(conn, slug)
+    conn.execute("UPDATE documents SET archived_at = NULL WHERE id = ?", (document.id,))
+    return require_document(conn, slug)
+
+
+def delete_document(conn: sqlite3.Connection, slug: str) -> None:
+    """Remove a document and its entire history. The schema cascades."""
+    document = require_document(conn, slug)
+    conn.execute("DELETE FROM documents WHERE id = ?", (document.id,))
+
+
+def count_archived(conn: sqlite3.Connection) -> int:
+    return conn.execute(
+        "SELECT COUNT(*) FROM documents WHERE archived_at IS NOT NULL"
+    ).fetchone()[0]
 
 
 # -- comments ---------------------------------------------------------------

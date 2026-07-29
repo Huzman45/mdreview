@@ -264,6 +264,46 @@ def status(
     )
 
 
+@app.command()
+def delete(
+    slug: Annotated[str, typer.Argument(help="Document slug.")],
+    yes: Annotated[bool, typer.Option("--yes", help="Skip the confirmation prompt.")] = False,
+    host: HostOption = None,
+    port: PortOption = None,
+    allow_lan: AllowLanOption = False,
+) -> None:
+    """Permanently remove a document, its versions, and their comments.
+
+    For putting a document away without destroying it, use Archive on the
+    review index instead.
+    """
+    settings = _settings(host, port, allow_lan)
+    with Client(settings) as client:
+        try:
+            document = client.get(f"/api/documents/{slug}")
+        except ApiUnreachable as exc:
+            raise _fail(str(exc), Exit.UNREACHABLE) from exc
+        except ApiError as exc:
+            raise _fail(exc.detail, Exit.ERROR) from exc
+
+        versions = len(document.get("versions") or [])
+        if not yes and not typer.confirm(
+            f"Permanently delete {slug!r} ({versions} version"
+            f"{'s' if versions != 1 else ''}, all comments)? This cannot be undone."
+        ):
+            # Declining is a successful non-action, not a failure.
+            typer.echo("nothing deleted")
+            raise typer.Exit(Exit.OK)
+        try:
+            client.delete(f"/api/documents/{slug}")
+        except ApiUnreachable as exc:
+            raise _fail(str(exc), Exit.UNREACHABLE) from exc
+        except ApiError as exc:
+            raise _fail(exc.detail, Exit.ERROR) from exc
+
+    typer.echo(f"deleted {slug}")
+
+
 @app.command("list")
 def list_documents(
     pending: Annotated[

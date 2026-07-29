@@ -112,6 +112,12 @@ STEPS: tuple[str, ...] = (
     ALTER TABLE comments_next RENAME TO comments;
     CREATE INDEX idx_comments_version ON comments(version_id, state);
     """,
+    # 3 — documents can be archived. NULL means active; the timestamp is shown
+    # in the archived listing. Nothing to backfill: everything existing is
+    # active.
+    """
+    ALTER TABLE documents ADD COLUMN archived_at TEXT;
+    """,
 )
 
 SCHEMA_VERSION = len(STEPS)
