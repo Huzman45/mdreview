@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires the mdreview CLI on PATH.
 metadata:
   author: fjvillamarin
-  version: "2.1"
+  version: "2.2"
 ---
 
 # Reviewing a document with mdreview
@@ -28,9 +28,29 @@ mdreview submit PLAN.md
 This prints the review URL, opens it in the user's browser, and returns
 immediately. Then:
 
-1. Tell the user the URL and that you are waiting on their review.
-2. **Stop.** Do not start implementing. Do not ask follow-up questions that
+1. If your harness can run background tasks, start the watcher (see below).
+2. Tell the user the URL and that you are waiting on their review.
+3. **Stop.** Do not start implementing. Do not ask follow-up questions that
    presume approval.
+
+## Waiting hands-free
+
+If — and only if — your harness supports background tasks (processes that
+run detached from your turn and notify you when they finish), start one
+right after submitting:
+
+```bash
+mdreview await <slug>   # run this AS A BACKGROUND TASK, never in the foreground
+```
+
+It polls until the user decides, then exits with the same code and output as
+`mdreview review`, so the completed task IS the outcome: branch on its exit
+code with the table below, no further command needed. The user never has to
+say "done".
+
+Never run `await` in the foreground of your turn. The no-blocking rule is
+absolute; a harness without background tasks simply uses the original flow —
+submit, stop, and read the outcome when nudged.
 
 Useful flags:
 
@@ -44,8 +64,10 @@ no-op, so retrying is safe.
 
 ## Reading the outcome
 
-When the user says the review is done — "done", "approved", "go", "have a look"
-— your **first action** is:
+When the background watcher completes, or when the user says the review is
+done — "done", "approved", "go", "have a look" — read the outcome. For a
+completed watcher the outcome is its own exit code and output; on a nudge,
+your **first action** is:
 
 ```bash
 mdreview review <slug>
@@ -132,6 +154,7 @@ Worth mentioning to the user if they are looking for something:
 ## Other commands
 
 ```bash
+mdreview await <slug>        # background watcher: exits with the outcome
 mdreview list --pending      # documents awaiting a decision
 mdreview status <slug>       # one-line summary
 mdreview open <slug>         # reopen the review page
