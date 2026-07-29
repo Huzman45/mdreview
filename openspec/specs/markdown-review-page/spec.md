@@ -30,6 +30,12 @@ text, and the page SHALL offer navigation to the other views of the same version
 - **THEN** the page shows the document title, the version number, the review status,
   and the originating project path
 
+#### Scenario: Page reports the originating session
+- **GIVEN** a document submitted from a detected agent session
+- **WHEN** a reviewer opens the review page
+- **THEN** the page shows which tool the session belongs to
+- **AND** the session identifier is available without leaving the page
+
 #### Scenario: Page links to the other views
 - **WHEN** a reviewer opens the review page for a version
 - **THEN** a link to the raw line view of that version is present
@@ -78,4 +84,79 @@ nor honour markup embedded in them.
 #### Scenario: Link targets are constrained
 - **WHEN** a version contains a link with a `javascript:` target
 - **THEN** the rendered link does not carry that target
+
+### Requirement: A comment can be anchored to a run of consecutive blocks
+The rendered view SHALL let the reviewer extend a block selection to a
+contiguous run of blocks with shift-click, using the same gesture as the source
+view, and anchor one comment to the whole span. The anchor is the line range
+from the first covered line to the last; it is stored no differently from a
+range drawn in the source view.
+
+#### Scenario: Shift-click extends the selection downward
+- **GIVEN** a selected block
+- **WHEN** the reviewer shift-clicks a later block
+- **THEN** the pending comment's anchor spans from the first block's start line
+  to the later block's end line
+
+#### Scenario: Shift-click extends the selection upward
+- **GIVEN** a selected block
+- **WHEN** the reviewer shift-clicks an earlier block
+- **THEN** the anchor spans from the earlier block's start line to the selected
+  block's end line
+
+#### Scenario: Blocks between the endpoints are included
+- **WHEN** a selection is extended across intervening blocks
+- **THEN** every block inside the span is visibly selected
+- **AND** the anchor covers their lines whether or not they were clicked
+
+#### Scenario: A plain click starts over
+- **GIVEN** an extended selection
+- **WHEN** the reviewer clicks a block without shift
+- **THEN** the selection is that single block again
+
+#### Scenario: The comment stores the extended range
+- **WHEN** a comment is submitted from an extended selection
+- **THEN** it is anchored to the span's line range
+- **AND** its quoted source is the markdown of that whole span
+
+### Requirement: Margin notes sit beside what they annotate
+In the two-column layout the margin SHALL place each note at the vertical
+position of its anchor — the line it targets, located proportionally within a
+multi-line block — so the association between remark and passage is carried
+by position rather than by reading references.
+
+#### Scenario: A note aligns with its block
+- **GIVEN** a comment anchored to a paragraph
+- **WHEN** the review page is shown in the two-column layout
+- **THEN** the note's top edge aligns with the paragraph's vertical position
+
+#### Scenario: A note into a long block points into it
+- **GIVEN** a comment anchored to a line in the middle of a fenced code block
+- **WHEN** the page is shown in the two-column layout
+- **THEN** the note sits beside the interior of the fence, below its top edge
+
+#### Scenario: Notes sharing an anchor stack downward
+- **GIVEN** two comments anchored to the same block
+- **WHEN** the page is shown in the two-column layout
+- **THEN** the first note holds the anchor position
+- **AND** the second sits fully below the first without overlapping it
+
+#### Scenario: Every note remains fully visible
+- **WHEN** notes are displaced downward by earlier notes
+- **THEN** no note is clipped, hidden, or overlapped
+- **AND** the page grows as needed to hold the last note
+
+#### Scenario: The comment form follows the selection
+- **GIVEN** a block is selected for commenting
+- **WHEN** the page is shown in the two-column layout
+- **THEN** the comment form is positioned beside the selected region
+
+#### Scenario: The narrow layout keeps the stacked list
+- **WHEN** the page is narrower than the two-column breakpoint
+- **THEN** notes appear as the existing stacked list below the prose
+- **AND** no note is absolutely positioned
+
+#### Scenario: Hovering a note indicates its target
+- **WHEN** the reviewer hovers a note in the two-column layout
+- **THEN** the annotated region in the prose is visibly indicated
 

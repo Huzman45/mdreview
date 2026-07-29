@@ -1,3 +1,18 @@
+## REMOVED Requirements
+
+### Requirement: Comments have stable human-readable references
+**Reason**: Re-added below with deletion-aware reference stability; the
+"References survive resolution" scenario describes an operation that no
+longer exists.
+
+### Requirement: Comments move through an explicit lifecycle
+**Reason**: Re-added below with the two-state lifecycle; every resolve
+scenario describes an operation that no longer exists.
+
+### Requirement: A new version supersedes prior comments
+**Reason**: Re-added below without the resolved-state scenario; `resolved`
+is retired.
+
 ## ADDED Requirements
 
 ### Requirement: An open comment can be edited
@@ -47,9 +62,7 @@ reviewer's own writing.
 - **WHEN** deletion is requested for a reference that does not exist on the version
 - **THEN** the request fails with an error naming the unknown reference
 
-## MODIFIED Requirements
-
-### Requirement: Comments have stable human-readable references
+### Requirement: Comment references are never reused
 Each comment SHALL carry a short reference that is stable within its version, so a
 reviewer and an agent can refer to the same note unambiguously. A reference, once
 assigned, is never given to different feedback — not even after the comment holding
@@ -74,7 +87,7 @@ it is deleted.
 - **WHEN** a comment referenced `C2` is edited and the version's comments are listed
 - **THEN** that comment is still referenced `C2`
 
-### Requirement: Comments move through an explicit lifecycle
+### Requirement: A comment is open until a revision supersedes it
 A comment SHALL be in exactly one of `open` or `outdated`, so that both reviewer and
 agent can tell what remains to be addressed. `open` means the note awaits the agent;
 `outdated` means a later version superseded it. Nothing else closes a comment: the
@@ -91,7 +104,7 @@ reviewer who no longer stands by a note edits or deletes it instead.
 - **THEN** the comment's state becomes `outdated`
 - **AND** no operation other than a revision changes a comment's state
 
-### Requirement: A new version supersedes prior comments
+### Requirement: A revision outdates prior comments
 When a revision is submitted, comments on earlier versions SHALL be marked `outdated`
 rather than relocated onto shifted line numbers.
 

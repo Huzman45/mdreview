@@ -53,7 +53,15 @@ re-reading the document.
   comments
 - **AND** the exit code is unchanged from the human-readable form
 
+## REMOVED Requirements
+
 ### Requirement: Supporting commands for the review loop
+**Reason**: Re-added below without the resolve scenario; the command no
+longer exists.
+
+## ADDED Requirements
+
+### Requirement: Supporting commands for operating the loop
 The CLI SHALL provide the operations needed to run the loop without opening a browser
 or writing HTTP requests by hand. Comments belong to the reviewer: no CLI command
 creates, changes, or removes one.

@@ -3,7 +3,6 @@
 ## Purpose
 Recording an approve or request-changes decision against a version, and
 exposing the pending or decided state of every document.
-
 ## Requirements
 ### Requirement: A reviewer records one decision per version
 A version SHALL carry exactly one review decision. Recording a decision closes that
@@ -53,8 +52,11 @@ act on.
 - **THEN** the status becomes `approved`
 
 ### Requirement: Pending reviews are discoverable
-The system SHALL expose which documents are awaiting a decision, so that a reviewer
-with several agents in flight can find them without hunting for URLs.
+The system SHALL expose which active documents are awaiting a decision, so that
+a reviewer with several agents in flight can find them without hunting for
+URLs. Archived documents are not awaiting anything and stay out of these
+listings. Decided documents are history and are presented grouped by day, so
+the recent past can be scanned without reading timestamps.
 
 #### Scenario: Index lists documents awaiting review
 - **GIVEN** three documents, two of which have a `pending` latest version
@@ -68,13 +70,30 @@ with several agents in flight can find them without hunting for URLs.
 - **THEN** documents whose latest version has been decided show that decision rather
   than appearing as awaiting review
 
+#### Scenario: Decided documents are grouped by day
+- **GIVEN** decided documents whose latest versions arrived on different days
+- **WHEN** the reviewer opens the index
+- **THEN** the decided documents appear under one heading per calendar day,
+  most recent day first
+- **AND** the current day is labelled Today and the previous one Yesterday
+
+#### Scenario: The waiting queue is not sliced by day
+- **GIVEN** documents awaiting review submitted on different days
+- **WHEN** the reviewer opens the index
+- **THEN** they are listed as one queue, newest first, with no day headings
+
 #### Scenario: Pending list can be filtered
 - **WHEN** the list of documents is requested restricted to pending reviews
-- **THEN** only documents whose latest version is `pending` are returned
+- **THEN** only active documents whose latest version is `pending` are returned
+
+#### Scenario: Archived documents are absent from the index
+- **GIVEN** an archived document
+- **WHEN** the reviewer opens the index
+- **THEN** it is not listed among waiting or decided documents
 
 ### Requirement: The current state of a document is queryable
 The system SHALL report the latest version of a document, its review status, and its
-unresolved comments as a single answer, since that is exactly what an agent needs on
+open comments as a single answer, since that is exactly what an agent needs on
 resume.
 
 #### Scenario: State of a pending document
