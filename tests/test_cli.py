@@ -246,6 +246,73 @@ def test_list_when_empty(cli: CliRunner) -> None:
     assert "No documents." in result.stdout
 
 
+# -- await ------------------------------------------------------------------
+
+
+def test_await_returns_immediately_when_already_decided(cli: CliRunner) -> None:
+    cli.write("PLAN.md", PLAN)
+    cli.run("submit", "PLAN.md", "--no-open")
+    with cli.api() as client:
+        client.post("/api/documents/plan/versions/1/decision", json={"status": "approved"})
+
+    started = time.monotonic()
+    result = cli.run("await", "plan", "--timeout", "30")
+    assert result.returncode == Exit.OK
+    assert "STATUS: approved" in result.stdout
+    assert time.monotonic() - started < 10
+
+
+def test_await_ends_when_a_decision_lands_mid_wait(cli: CliRunner) -> None:
+    cli.write("PLAN.md", PLAN)
+    cli.run("submit", "PLAN.md", "--no-open")
+
+    waiter = subprocess.Popen(
+        [sys.executable, "-m", "mdreview", "await", "plan", "--timeout", "60"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        env=cli.env,
+        cwd=cli.workdir,
+    )
+    try:
+        time.sleep(1.0)
+        assert waiter.poll() is None, "await must still be waiting before the decision"
+        with cli.api() as client:
+            client.post(
+                "/api/documents/plan/versions/1/comments",
+                json={"line_start": 1, "line_end": 1, "body": "tighten"},
+            )
+            client.post(
+                "/api/documents/plan/versions/1/decision",
+                json={"status": "changes_requested"},
+            )
+        stdout, _ = waiter.communicate(timeout=15)
+    finally:
+        if waiter.poll() is None:
+            waiter.kill()
+
+    assert waiter.returncode == Exit.CHANGES_REQUESTED
+    assert "STATUS: changes_requested" in stdout
+    assert "tighten" in stdout, "the completed wait must carry the feedback"
+
+
+def test_await_times_out_with_exit_3(cli: CliRunner) -> None:
+    cli.write("PLAN.md", PLAN)
+    cli.run("submit", "PLAN.md", "--no-open")
+    result = cli.run("await", "plan", "--timeout", "1")
+    assert result.returncode == Exit.PENDING
+    assert "No decision has been recorded" in result.stdout
+
+
+def test_await_reports_an_unreachable_server_as_5(
+    settings: Settings, data_dir: Path, tmp_path: Path
+) -> None:
+    runner = CliRunner(settings, data_dir, tmp_path)
+    runner.env["MDREVIEW_AUTOSTART"] = "0"
+    result = runner.run("await", "ghost", "--timeout", "3")
+    assert result.returncode == Exit.UNREACHABLE
+
+
 # -- session provenance -----------------------------------------------------
 
 # The suite itself runs inside an agent session, so detection tests must pin

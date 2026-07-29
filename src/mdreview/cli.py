@@ -249,6 +249,76 @@ def review(
     raise typer.Exit(exit_for(status))
 
 
+@app.command("await")
+def await_decision(
+    slug: Annotated[str, typer.Argument(help="Document slug.")],
+    timeout: Annotated[
+        float,
+        typer.Option("--timeout", help="Give up after this many seconds, exiting 3."),
+    ] = 8 * 60 * 60,
+    host: HostOption = None,
+    port: PortOption = None,
+    allow_lan: AllowLanOption = False,
+) -> None:
+    """Wait until the latest version is decided, then report like `review`.
+
+    Built to run as a background task: the process ending is the
+    notification, and the exit code is the message — the same mapping as
+    `review`. The wait is a client-side poll; the server holds no
+    connection and does not know it is being watched.
+    """
+    import time
+
+    interval = 2.0
+    # Sixty consecutive unreachable seconds end the wait: brief restarts
+    # (upgrades, autostart races) are ridden out, a dead server is not an
+    # outcome. Capped by the timeout so a short --timeout stays short.
+    unreachable_grace = min(60.0, timeout)
+
+    settings = _settings(host, port, allow_lan)
+    deadline = time.monotonic() + timeout
+    unreachable_since: float | None = None
+    reached = False
+    state: dict[str, Any] | None = None
+
+    typer.secho(
+        f"awaiting a decision on {slug!r} (polling every {interval:g}s, timeout {timeout:g}s)",
+        fg=typer.colors.BLUE,
+        err=True,
+    )
+
+    with Client(settings) as client:
+        while True:
+            try:
+                state = client.get(f"/api/documents/{slug}/state")
+            except ApiUnreachable as exc:
+                now = time.monotonic()
+                unreachable_since = unreachable_since or now
+                if now - unreachable_since >= unreachable_grace:
+                    raise _fail(str(exc), Exit.UNREACHABLE) from exc
+            except ApiError as exc:
+                raise _fail(exc.detail, Exit.ERROR) from exc
+            else:
+                reached = True
+                unreachable_since = None
+                status = ReviewStatus(state["status"])
+                if status.is_decided:
+                    typer.echo(report.render_state(state))
+                    raise typer.Exit(exit_for(status))
+
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(interval)
+
+    if not reached:
+        # Never got an answer: "undecided" is a statement about the review,
+        # and an unreachable server cannot make it.
+        raise _fail("server was never reachable while waiting", Exit.UNREACHABLE)
+    assert state is not None
+    typer.echo(report.render_state(state))
+    raise typer.Exit(exit_for(ReviewStatus(state["status"])))
+
+
 @app.command()
 def status(
     slug: Annotated[str, typer.Argument(help="Document slug.")],

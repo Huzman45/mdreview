@@ -72,6 +72,7 @@ tell me the URL, and stop. When I say the review is done, run
 ```bash
 mdreview submit PLAN.md          # publish, open the browser, print the URL
 mdreview review plan             # read the outcome; the exit code is the answer
+mdreview await plan              # wait for the outcome (made to run in background)
 mdreview list --pending          # what is awaiting a decision
 mdreview status plan             # one-line summary
 mdreview open plan               # reopen the page
@@ -94,6 +95,13 @@ can branch on it without parsing text.
 Code 3 is the important one. In a hands-off loop you will sometimes nudge the
 agent before you have actually clicked anything, and an agent that reads "no
 changes requested" as "approved" would implement an unreviewed plan.
+
+`mdreview await` closes the loop without the nudge: it polls until a decision
+lands, then exits with the same code and report as `review`. An agent whose
+harness supports background tasks starts it after submitting and is woken by
+its completion — nobody has to type "done". It times out (default eight
+hours) with exit 3, and a server that never answers is exit 5, never a
+verdict.
 
 ### Output shape
 
