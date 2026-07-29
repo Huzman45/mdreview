@@ -7,6 +7,14 @@
   <span class="colophon-dot">·</span>
   <span>{{ comments|length }} comment{{ 's' if comments|length != 1 }}</span>
 
+  {% if document.session_tool or document.session_id %}
+    <span class="colophon-dot">·</span>
+    <span class="colophon-session"
+          title="{{ document.session_id or 'session id unknown' }}">
+      {{ document.session_tool | tool_label or "agent session" }}{% if document.session_id %} {{ document.session_id | session_short }}{% endif %}
+    </span>
+  {% endif %}
+
   {% if versions|length > 1 %}
     <span class="colophon-dot">·</span>
     <span class="colophon-versions">

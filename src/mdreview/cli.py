@@ -10,7 +10,7 @@ from typing import Annotated, Any
 
 import typer
 
-from . import __version__, config, report
+from . import __version__, config, report, session
 from .client import ApiError, ApiUnreachable, Client
 from .config import Settings
 from .exits import Exit, exit_for
@@ -147,6 +147,10 @@ def submit(
     content = path.read_text(encoding="utf-8")
     settings = _settings(host, port, allow_lan)
 
+    # Detected at submit time, not at import: Claude Code rewrites its
+    # session id in place after a conversation reset.
+    origin = session.detect(os.environ)
+
     with Client(settings) as client:
         try:
             result = client.post(
@@ -156,7 +160,8 @@ def submit(
                     "slug": slug,
                     "title": title,
                     "project_path": str(Path.cwd()),
-                    "session_id": os.environ.get("MDREVIEW_SESSION_ID"),
+                    "session_id": origin.session_id,
+                    "session_tool": origin.tool,
                     "source_name": path.stem,
                 },
             )

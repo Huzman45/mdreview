@@ -109,6 +109,28 @@ def test_index_shows_open_counts(api: TestClient) -> None:
     assert "2 open" in api.get("/").text
 
 
+def test_page_reports_the_originating_session(api: TestClient) -> None:
+    submit(
+        api,
+        session_id="1e0e56a0-58bf-483b-b57b-9c5f723dec63",
+        session_tool="claude-code",
+    )
+    page = api.get("/d/plan").text
+    assert "Claude Code" in page
+    assert "1e0e56a0" in page  # the shortened id
+    assert "1e0e56a0-58bf-483b-b57b-9c5f723dec63" in page  # full id on hover
+
+    index = api.get("/").text
+    assert "Claude Code" in index
+
+
+def test_a_session_tool_without_an_id_still_shows(api: TestClient) -> None:
+    submit(api, session_tool="opencode")
+    page = api.get("/d/plan").text
+    assert "opencode" in page
+    assert "session id unknown" in page
+
+
 # -- day grouping -----------------------------------------------------------
 
 

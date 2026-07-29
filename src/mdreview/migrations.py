@@ -118,6 +118,20 @@ STEPS: tuple[str, ...] = (
     """
     ALTER TABLE documents ADD COLUMN archived_at TEXT;
     """,
+    # 4 — the session tool is stored beside the session id. The tool is
+    # usually inferable from the id's shape, but tool-only provenance (id
+    # scrubbed by the agent, plugin not installed) has no id to infer from,
+    # so it is a fact of its own. Existing ids are backfilled from the two
+    # known shapes.
+    """
+    ALTER TABLE documents ADD COLUMN session_tool TEXT;
+
+    UPDATE documents SET session_tool = CASE
+        WHEN session_id LIKE 'ses_%' THEN 'opencode'
+        WHEN session_id LIKE '________-____-____-____-____________' THEN 'claude-code'
+    END
+    WHERE session_id IS NOT NULL;
+    """,
 )
 
 SCHEMA_VERSION = len(STEPS)

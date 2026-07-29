@@ -32,7 +32,7 @@ Then install the CLI and the agent skill together:
 mise run setup
 ```
 
-That does two things:
+That does three things:
 
 - `install-cli` — `uv tool install --editable .`, putting `mdreview` on your
   `PATH`. Editable means the command tracks this checkout, so **the tool breaks
@@ -41,6 +41,19 @@ That does two things:
 - `install-skill` — copies `skill/md-review` to `~/.agents/skills/md-review` and
   symlinks it into `~/.claude/skills/`, so opencode and Claude Code both see one
   source of truth. Re-run it after editing the skill.
+- `install-opencode-plugin` — copies `contrib/opencode/mdreview-session.js` to
+  `~/.config/opencode/plugins/`. opencode does not expose its session id to
+  shell commands the way Claude Code does; the plugin injects
+  `OPENCODE_SESSION_ID` per command so a submission records which conversation
+  it came from. Without it, opencode submissions still record the tool, just
+  not the session.
+
+Each submission records where it came from: the project directory and, when
+detectable, the agent session. Detection reads the environment at submit time —
+`MDREVIEW_SESSION_ID` (explicit override) first, then `OPENCODE_SESSION_ID`
+(injected per command by the plugin above), then `CLAUDE_CODE_SESSION_ID`
+(exported by Claude Code), then the bare `OPENCODE`/`CLAUDECODE` presence
+markers, which record the tool without an id.
 
 Optionally, add this to your global agent instructions so agents reach for it by
 default rather than pasting plans into chat:

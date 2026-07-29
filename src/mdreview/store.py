@@ -95,11 +95,13 @@ def create_document(
     title: str,
     project_path: str | None,
     session_id: str | None,
+    session_tool: str | None = None,
 ) -> Document:
     cursor = conn.execute(
-        "INSERT INTO documents (slug, title, project_path, session_id, created_at)"
-        " VALUES (?, ?, ?, ?, ?)",
-        (slug, title, project_path, session_id, now()),
+        "INSERT INTO documents"
+        " (slug, title, project_path, session_id, session_tool, created_at)"
+        " VALUES (?, ?, ?, ?, ?, ?)",
+        (slug, title, project_path, session_id, session_tool, now()),
     )
     row = conn.execute("SELECT * FROM documents WHERE id = ?", (cursor.lastrowid,)).fetchone()
     return Document.from_row(row)
@@ -153,6 +155,7 @@ def submit(
     title: str | None = None,
     project_path: str | None = None,
     session_id: str | None = None,
+    session_tool: str | None = None,
     source_name: str = "document",
 ) -> Submission:
     """Record ``content`` as a new version, opening a review round.
@@ -181,14 +184,15 @@ def submit(
                 title=resolved_title,
                 project_path=project_path,
                 session_id=session_id,
+                session_tool=session_tool,
             )
         else:
             # A new round must be visible where the reviewer looks, so a
             # submission also reactivates an archived document.
             conn.execute(
                 "UPDATE documents SET title = ?, project_path = ?, session_id = ?,"
-                " archived_at = NULL WHERE id = ?",
-                (resolved_title, project_path, session_id, document.id),
+                " session_tool = ?, archived_at = NULL WHERE id = ?",
+                (resolved_title, project_path, session_id, session_tool, document.id),
             )
             document = require_document(conn, document.slug)
 
