@@ -46,12 +46,17 @@ class CliRunner:
             "MDREVIEW_PORT": str(settings.port),
         }
 
-    def run(self, *args: str, stdin: str | None = None) -> subprocess.CompletedProcess[str]:
+    def run(
+        self,
+        *args: str,
+        stdin: str | None = None,
+        env: dict[str, str] | None = None,
+    ) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             [sys.executable, "-m", "mdreview", *args],
             capture_output=True,
             text=True,
-            env=self.env,
+            env={**self.env, **(env or {})},
             cwd=self.workdir,
             timeout=60,
             input=stdin,
@@ -239,6 +244,52 @@ def test_list_pending(cli: CliRunner) -> None:
 def test_list_when_empty(cli: CliRunner) -> None:
     result = cli.run("list")
     assert "No documents." in result.stdout
+
+
+# -- session provenance -----------------------------------------------------
+
+# The suite itself runs inside an agent session, so detection tests must pin
+# every variable they depend on; an empty value reads as unset.
+NO_SESSION = {
+    "MDREVIEW_SESSION_ID": "",
+    "OPENCODE_SESSION_ID": "",
+    "CLAUDE_CODE_SESSION_ID": "",
+    "OPENCODE": "",
+    "CLAUDECODE": "",
+}
+
+
+def test_submit_records_the_detected_session(cli: CliRunner) -> None:
+    cli.write("PLAN.md", PLAN)
+    claude_id = "1e0e56a0-58bf-483b-b57b-9c5f723dec63"
+    env = {**NO_SESSION, "CLAUDECODE": "1", "CLAUDE_CODE_SESSION_ID": claude_id}
+    assert cli.run("submit", "PLAN.md", "--no-open", env=env).returncode == Exit.OK
+
+    with cli.api() as client:
+        document = client.get("/api/documents/plan")
+    assert document["session_tool"] == "claude-code"
+    assert document["session_id"] == claude_id
+
+
+def test_submit_records_the_tool_when_the_id_is_scrubbed(cli: CliRunner) -> None:
+    cli.write("PLAN.md", PLAN)
+    env = {**NO_SESSION, "OPENCODE": "1"}
+    cli.run("submit", "PLAN.md", "--no-open", env=env)
+
+    with cli.api() as client:
+        document = client.get("/api/documents/plan")
+    assert document["session_tool"] == "opencode"
+    assert document["session_id"] is None
+
+
+def test_submit_outside_any_session_records_nothing(cli: CliRunner) -> None:
+    cli.write("PLAN.md", PLAN)
+    cli.run("submit", "PLAN.md", "--no-open", env=NO_SESSION)
+
+    with cli.api() as client:
+        document = client.get("/api/documents/plan")
+    assert document["session_tool"] is None
+    assert document["session_id"] is None
 
 
 # -- delete -----------------------------------------------------------------

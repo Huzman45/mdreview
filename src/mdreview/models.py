@@ -39,6 +39,7 @@ class Document:
     session_id: str | None
     created_at: str
     archived_at: str | None = None
+    session_tool: str | None = None
 
     @property
     def is_archived(self) -> bool:
@@ -54,6 +55,7 @@ class Document:
             session_id=row["session_id"],
             created_at=row["created_at"],
             archived_at=row["archived_at"],
+            session_tool=row["session_tool"],
         )
 
 

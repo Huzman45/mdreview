@@ -19,7 +19,7 @@
           {% endif %}
         </span>
         <span class="docrow-sub">
-          {% if item.document.project_path %}{{ item.document.project_path | display_path }}{% else %}{{ item.document.slug }}{% endif %}
+          {% if item.document.project_path %}{{ item.document.project_path | display_path }}{% else %}{{ item.document.slug }}{% endif %}{% if item.document.session_tool %} · {{ item.document.session_tool | tool_label }}{% endif %}
         </span>
       </span>
 

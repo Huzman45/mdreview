@@ -46,6 +46,7 @@ class SubmitRequest(BaseModel):
     title: str | None = None
     project_path: str | None = None
     session_id: str | None = None
+    session_tool: str | None = None
     source_name: str = "document"
 
 
@@ -72,6 +73,7 @@ class DocumentResponse(BaseModel):
     title: str
     project_path: str | None
     session_id: str | None
+    session_tool: str | None
     created_at: str
     url: str
     latest: VersionSummary
@@ -101,6 +103,7 @@ def submit_document(payload: SubmitRequest, conn: Conn, settings: Config) -> Sub
             title=payload.title,
             project_path=payload.project_path,
             session_id=payload.session_id,
+            session_tool=payload.session_tool,
             source_name=payload.source_name,
         )
     except StoreError as exc:
@@ -145,6 +148,7 @@ def get_document(slug: str, conn: Conn, settings: Config) -> DocumentResponse:
         title=document.title,
         project_path=document.project_path,
         session_id=document.session_id,
+        session_tool=document.session_tool,
         created_at=document.created_at,
         url=review_url(settings, document.slug),
         latest=VersionSummary(

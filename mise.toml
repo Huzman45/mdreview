@@ -48,9 +48,18 @@ if [ -d "$HOME/.claude" ]; then
 fi
 """
 
+[tasks.install-opencode-plugin]
+description = "Install the opencode plugin that exposes the session id to shell commands"
+run = """
+set -e
+mkdir -p "$HOME/.config/opencode/plugins"
+cp contrib/opencode/mdreview-session.js "$HOME/.config/opencode/plugins/mdreview-session.js"
+echo "installed $HOME/.config/opencode/plugins/mdreview-session.js"
+"""
+
 [tasks.setup]
-description = "Install the CLI and the agent skill for all agents"
-depends = ["install-cli", "install-skill"]
+description = "Install the CLI, the agent skill, and the opencode plugin"
+depends = ["install-cli", "install-skill", "install-opencode-plugin"]
 
 [tasks.install-service]
 description = "Run the LAN review server as a background service"

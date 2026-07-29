@@ -83,6 +83,33 @@ def relative_time(value: str | None) -> str:
 templates.env.filters["relative_time"] = relative_time
 
 
+TOOL_LABELS = {"claude-code": "Claude Code", "opencode": "opencode"}
+
+
+def tool_label(value: str | None) -> str:
+    return TOOL_LABELS.get(value or "", value or "")
+
+
+templates.env.filters["tool_label"] = tool_label
+
+
+def session_short(value: str | None) -> str:
+    """Enough of a session id to recognise it; the full id rides on hover.
+
+    Claude Code ids are UUIDs (first segment identifies them the way short
+    git hashes do); opencode ids keep their ``ses_`` prefix plus the leading
+    timestamp characters.
+    """
+    if not value:
+        return ""
+    if value.startswith("ses_"):
+        return value[: 4 + 8]
+    return value.split("-", 1)[0]
+
+
+templates.env.filters["session_short"] = session_short
+
+
 def day_of(value: str) -> date:
     """The calendar day a stored UTC timestamp fell on, on the local clock.
 
