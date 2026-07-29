@@ -451,3 +451,83 @@ def test_the_full_review_loop(cli: CliRunner) -> None:
     assert final.returncode == Exit.OK
     assert "STATUS: approved" in final.stdout
     assert "NOTE: good now" in final.stdout
+
+
+# -- multi-file submission ---------------------------------------------------
+
+
+def _write_bundle(cli: CliRunner) -> None:
+    (cli.workdir / "change-x" / "specs").mkdir(parents=True, exist_ok=True)
+    (cli.workdir / "change-x" / "proposal.md").write_text("## Why\n\nBecause.\n")
+    (cli.workdir / "change-x" / "specs" / "spec.md").write_text("## ADDED\n\nA requirement.\n")
+
+
+def test_submit_several_files_assembles_under_path_headings(cli: CliRunner) -> None:
+    _write_bundle(cli)
+    result = cli.run(
+        "submit", "change-x/proposal.md", "change-x/specs/spec.md", "--no-open"
+    )
+    assert result.returncode == Exit.OK
+
+    with cli.api() as client:
+        content = client.get_text("/api/documents/change-x/versions/1/content")
+    assert content == (
+        "# change-x/proposal.md\n\n## Why\n\nBecause.\n"
+        "\n# change-x/specs/spec.md\n\n## ADDED\n\nA requirement.\n"
+    )
+
+
+def test_resubmitting_the_same_files_reuses_the_round(cli: CliRunner) -> None:
+    _write_bundle(cli)
+    args = ("submit", "change-x/proposal.md", "change-x/specs/spec.md", "--no-open")
+    cli.run(*args)
+    # Same slug, same bytes: the pending round is reused, as for one file.
+    result = cli.run(*args, "--slug", "change-x")
+    assert "reusing existing round" in result.stdout
+
+
+def test_multi_file_defaults_derive_from_the_common_parent(cli: CliRunner) -> None:
+    _write_bundle(cli)
+    cli.run("submit", "change-x/proposal.md", "change-x/specs/spec.md", "--no-open")
+    result = cli.run("list", "--json")
+    item = json.loads(result.stdout)[0]
+    assert item["slug"] == "change-x"
+    assert item["title"] == "change-x"
+
+
+def test_single_file_submission_is_unchanged(cli: CliRunner) -> None:
+    cli.write("PLAN.md", PLAN)
+    cli.run("submit", "PLAN.md", "--no-open")
+    with cli.api() as client:
+        content = client.get_text("/api/documents/plan/versions/1/content")
+    assert content == PLAN  # no heading injected, byte-identical
+
+
+def test_multi_file_with_a_missing_file_records_nothing(cli: CliRunner) -> None:
+    _write_bundle(cli)
+    result = cli.run("submit", "change-x/proposal.md", "nope.md", "--no-open")
+    assert result.returncode == Exit.ERROR
+    assert "nope.md" in result.stderr
+    assert json.loads(cli.run("list", "--json").stdout) == []
+
+
+def test_review_maps_comments_back_to_source_files(cli: CliRunner) -> None:
+    _write_bundle(cli)
+    cli.run("submit", "change-x/proposal.md", "change-x/specs/spec.md", "--no-open")
+
+    with cli.api() as client:
+        # "A requirement." is line 3 of specs/spec.md: assembly lines are
+        # proposal (heading L1, content L3-5), spec heading L7, content L9-11.
+        client.post(
+            "/api/documents/change-x/versions/1/comments",
+            json={"line_start": 11, "line_end": 11, "body": "tighten this"},
+        )
+        client.post(
+            "/api/documents/change-x/versions/1/decision",
+            json={"status": "changes_requested"},
+        )
+
+    result = cli.run("review", "change-x")
+    assert result.returncode == Exit.CHANGES_REQUESTED
+    assert "(change-x/specs/spec.md:3)" in result.stdout
+    assert "same files in the same order" in result.stdout

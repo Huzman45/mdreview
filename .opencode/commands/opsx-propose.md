@@ -82,11 +82,24 @@ When ready to implement, run /opsx-apply
 
 **Output**
 
-After completing all artifacts, summarize:
+After completing all artifacts, submit the change for review as one document
+(this is the human gate between propose and apply — do not start `/opsx-apply`
+until it is approved):
+
+```bash
+cd openspec/changes/<name>
+mdreview submit proposal.md design.md tasks.md specs/*/spec.md
+```
+
+If your harness runs background tasks, start `mdreview await <slug>` as one;
+the finished task carries the decision. Feedback names the source file and
+line — edit those files and resubmit the same set with the same slug.
+
+Then summarize:
 - Change name and location
 - List of artifacts created with brief descriptions
-- What's ready: "All artifacts created! Ready for implementation."
-- Prompt: "Run `/opsx-apply` to start implementing."
+- The review URL, and that you are waiting on the review
+- Prompt: "Approve the review, then run `/opsx-apply` to start implementing."
 
 **Artifact Creation Guidelines**
 

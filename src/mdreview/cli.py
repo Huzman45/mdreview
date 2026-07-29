@@ -123,9 +123,37 @@ def _fail(message: str, code: Exit) -> typer.Exit:
     return typer.Exit(code)
 
 
+def _assemble(paths: list[Path]) -> str:
+    """Join several files into one document, a `# <path>` heading each.
+
+    The format is the contract comment line-ranges depend on, so it is
+    deterministic to the byte: the path exactly as written, a blank line,
+    the file's content with trailing whitespace normalised to one newline,
+    a blank line before the next heading.
+    """
+    parts = []
+    for path in paths:
+        content = path.read_text(encoding="utf-8").rstrip()
+        parts.append(f"# {path}\n\n{content}\n")
+    return "\n".join(parts)
+
+
+def _common_parent_name(paths: list[Path]) -> str | None:
+    """The deepest directory all files share — usually the change's name."""
+    common = Path(os.path.commonpath([p.resolve().parent for p in paths]))
+    return common.name or None
+
+
 @app.command()
 def submit(
-    path: Annotated[Path, typer.Argument(help="Markdown file to publish for review.")],
+    paths: Annotated[
+        list[Path],
+        typer.Argument(
+            help="Markdown file(s) to publish for review. Several files are "
+            "assembled into one document, a '# <path>' heading each, in "
+            "argument order."
+        ),
+    ],
     slug: Annotated[
         str | None, typer.Option("--slug", help="Reuse an existing document slug.")
     ] = None,
@@ -140,11 +168,22 @@ def submit(
     port: PortOption = None,
     allow_lan: AllowLanOption = False,
 ) -> None:
-    """Publish a markdown file for review and print its URL."""
-    if not path.is_file():
-        raise _fail(f"no such file: {path}", Exit.ERROR)
+    """Publish markdown for review and print its URL."""
+    for path in paths:
+        if not path.is_file():
+            raise _fail(f"no such file: {path}", Exit.ERROR)
 
-    content = path.read_text(encoding="utf-8")
+    if len(paths) == 1:
+        content = paths[0].read_text(encoding="utf-8")
+        source_name = paths[0].stem
+    else:
+        content = _assemble(paths)
+        # A file set is almost always a directory's contents, and the
+        # directory name is the name of the thing under review.
+        parent = _common_parent_name(paths)
+        source_name = parent or "document"
+        if title is None and parent:
+            title = parent
     settings = _settings(host, port, allow_lan)
 
     # Detected at submit time, not at import: Claude Code rewrites its
@@ -162,7 +201,7 @@ def submit(
                     "project_path": str(Path.cwd()),
                     "session_id": origin.session_id,
                     "session_tool": origin.tool,
-                    "source_name": path.stem,
+                    "source_name": source_name,
                 },
             )
         except ApiUnreachable as exc:
@@ -210,6 +249,21 @@ def _state(client: Client, slug: str) -> dict[str, Any]:
         raise _fail(exc.detail, Exit.ERROR) from exc
 
 
+def _content_for_report(client: Client, slug: str, state: dict[str, Any]) -> str | None:
+    """The reviewed content, fetched so comments can be mapped to source files.
+
+    Only worth a request when there is feedback to map, and never a reason a
+    report fails: an older server without the endpoint just means an
+    unannotated report (the version-skew warning already nags about that).
+    """
+    if not state.get("open_comments"):
+        return None
+    try:
+        return client.get_text(f"/api/documents/{slug}/versions/{state['version']}/content")
+    except (ApiUnreachable, ApiError):
+        return None
+
+
 def _warn_on_version_skew(client: Client) -> None:
     """A server left running across an upgrade will serve the old code."""
     running = client.server_version()
@@ -239,12 +293,13 @@ def review(
     with Client(settings) as client:
         state = _state(client, slug)
         _warn_on_version_skew(client)
+        content = _content_for_report(client, slug, state)
 
     status = ReviewStatus(state["status"])
     if as_json:
         typer.echo(json.dumps(state, indent=2))
     else:
-        typer.echo(report.render_state(state))
+        typer.echo(report.render_state(state, content))
 
     raise typer.Exit(exit_for(status))
 
@@ -303,7 +358,8 @@ def await_decision(
                 unreachable_since = None
                 status = ReviewStatus(state["status"])
                 if status.is_decided:
-                    typer.echo(report.render_state(state))
+                    content = _content_for_report(client, slug, state)
+                    typer.echo(report.render_state(state, content))
                     raise typer.Exit(exit_for(status))
 
             if time.monotonic() >= deadline:

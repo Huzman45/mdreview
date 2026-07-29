@@ -33,6 +33,26 @@ immediately. Then:
 3. **Stop.** Do not start implementing. Do not ask follow-up questions that
    presume approval.
 
+## Reviewing a set of files as one decision
+
+When the reviewable thing is several files — an openspec change, a multi-file
+plan, an ADR set — submit them together so the user makes one decision:
+
+```bash
+cd openspec/changes/add-thing
+mdreview submit proposal.md design.md tasks.md specs/*/spec.md
+```
+
+Argument order is reading order. Each file appears under a `# <path>` heading,
+so run the command from the directory that makes those paths short and
+readable. With no `--slug`/`--title`, both default from the files' common
+parent directory — usually exactly the change name.
+
+Feedback comes back already mapped: each comment names its source file and
+file-local line (`[C2] L204 (specs/agent-cli/spec.md:8)`). Edit that file at
+that line, then resubmit the **same files in the same order** with the same
+slug for another round.
+
 ## Waiting hands-free
 
 If — and only if — your harness supports background tasks (processes that
@@ -109,6 +129,10 @@ STATUS: changes_requested   VERSION: 1   OPEN: 2
 Everything you need is in that output; you do not need to re-read the file to
 understand the feedback. A comment may target a single line — including one line
 inside a fenced code block — so read the line range, not just the quote.
+
+On a document submitted as a set of files, each label also carries the source:
+`[C1] L204 (specs/agent-cli/spec.md:8)` means line 8 *of that file* — edit
+there, not in any assembled copy.
 
 Then:
 

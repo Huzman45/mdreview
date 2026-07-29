@@ -117,3 +117,16 @@ def test_provenance_round_trips(api: TestClient) -> None:
     payload = api.get("/api/documents/plan").json()
     assert payload["project_path"] == "/tmp/project"
     assert payload["session_id"] == "abc"
+
+
+def test_version_content_round_trips(api: TestClient) -> None:
+    content = "# a.md\n\nAlpha — with unicode → and `code`.\n"
+    api.post("/api/documents", json={"content": content, "source_name": "bundle"})
+    response = api.get("/api/documents/bundle/versions/1/content")
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/plain")
+    assert response.text == content
+
+
+def test_version_content_missing_is_404(api: TestClient) -> None:
+    assert api.get("/api/documents/nope/versions/1/content").status_code == 404

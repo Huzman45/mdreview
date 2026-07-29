@@ -306,6 +306,14 @@ body {
 .prose { min-width: 0; }
 
 .prose h1 { font-size: 2.1rem; line-height: 1.18; margin: 0 0 1rem; letter-spacing: -0.015em; }
+/* Every top-level heading after the first opens a new part — the visible
+   seam between the files of an assembled document, and between the parts of
+   any other multi-part document. */
+.prose .mdr-block:has(> h1) ~ .mdr-block:has(> h1) {
+  margin-top: 3.4rem;
+  padding-top: 2.4rem;
+  border-top: 1px solid var(--rule);
+}
 .prose h2 {
   font-size: 1.4rem;
   margin: 2.4rem 0 0.7rem;
