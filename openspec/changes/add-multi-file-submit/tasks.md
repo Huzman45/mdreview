@@ -1,5 +1,3 @@
-# Tasks
-
 - [x] `cli.py`: `submit` takes one or more paths; `_assemble` builds the
       deterministic bundle; slug/title default from the common parent for
       several files; single-file behaviour unchanged.

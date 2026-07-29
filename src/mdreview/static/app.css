@@ -309,7 +309,7 @@ body {
 /* Every top-level heading after the first opens a new part — the visible
    seam between the files of an assembled document, and between the parts of
    any other multi-part document. */
-.prose .mdr-block:has(> h1) ~ .mdr-block:has(> h1) {
+.prose h1 ~ h1 {
   margin-top: 3.4rem;
   padding-top: 2.4rem;
   border-top: 1px solid var(--rule);

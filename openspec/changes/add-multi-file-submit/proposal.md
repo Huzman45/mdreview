@@ -1,5 +1,3 @@
-# Submit several files as one reviewable document
-
 ## Why
 
 An openspec change is agent-authored markdown whose whole purpose is to be

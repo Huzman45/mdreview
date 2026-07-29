@@ -1,5 +1,3 @@
-# Design
-
 ## D1. The assembly format is the contract
 
 Each file contributes `# <path as written>`, a blank line, its content with
