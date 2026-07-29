@@ -19,7 +19,11 @@ from .migrations import STEPS
 def connect(path: Path) -> sqlite3.Connection:
     """Open a connection with the pragmas this application depends on."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, isolation_level=None)
+    # check_same_thread is off because FastAPI runs sync dependencies in a
+    # threadpool: the thread that finalises a request's connection is not
+    # always the thread that opened it. Each connection still serves one
+    # request at a time, so there is no concurrent cross-thread use.
+    conn = sqlite3.connect(path, isolation_level=None, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA foreign_keys = ON")

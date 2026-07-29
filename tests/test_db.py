@@ -151,3 +151,15 @@ def test_foreign_keys_are_enforced(tmp_path: Path) -> None:
             " VALUES (999, 1, 'x', 'sha', '2026-01-01')"
         )
     conn.close()
+
+
+def test_connection_survives_use_from_another_thread(tmp_path: Path) -> None:
+    """FastAPI tears down sync dependencies in a threadpool, so the closing
+    thread is not always the opening thread. sqlite3's same-thread check would
+    turn that into an intermittent 500 on an otherwise successful request."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    conn = db.connect(tmp_path / "db.sqlite")
+    conn.execute("SELECT 1")
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        pool.submit(conn.close).result()
