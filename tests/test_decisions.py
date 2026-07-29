@@ -78,10 +78,10 @@ def test_a_note_alone_is_enough_feedback(conn: sqlite3.Connection) -> None:
     assert decided.status is ReviewStatus.CHANGES_REQUESTED
 
 
-def test_resolved_comments_do_not_count_as_feedback(conn: sqlite3.Connection) -> None:
+def test_deleted_comments_do_not_count_as_feedback(conn: sqlite3.Connection) -> None:
     version = a_version(conn)
     store.create_comment(conn, version=version, line_start=1, line_end=1, body="fix")
-    store.resolve_comment(conn, version.id, "C1")
+    store.delete_comment(conn, version.id, "C1")
     with pytest.raises(StoreError, match="at least one open comment"):
         store.decide(conn, version=version, status=ReviewStatus.CHANGES_REQUESTED)
 
@@ -110,20 +110,20 @@ def test_state_of_a_pending_document(conn: sqlite3.Connection) -> None:
     store.submit(conn, content=PLAN, source_name="plan")
     state = store.document_state(conn, "plan")
     assert state.status is ReviewStatus.PENDING
-    assert state.unresolved == ()
+    assert state.open_comments == ()
 
 
-def test_state_reports_unresolved_comments(conn: sqlite3.Connection) -> None:
+def test_state_reports_open_comments(conn: sqlite3.Connection) -> None:
     version = a_version(conn)
     store.create_comment(conn, version=version, line_start=1, line_end=1, body="one")
     store.create_comment(conn, version=version, line_start=5, line_end=5, body="two")
-    store.resolve_comment(conn, version.id, "C1")
+    store.delete_comment(conn, version.id, "C1")
     store.decide(conn, version=version, status=ReviewStatus.CHANGES_REQUESTED)
 
     state = store.document_state(conn, "plan")
     assert state.status is ReviewStatus.CHANGES_REQUESTED
-    assert [c.ref for c in state.unresolved] == ["C2"]
-    assert state.unresolved[0].quoted == "- alpha"
+    assert [c.ref for c in state.open_comments] == ["C2"]
+    assert state.open_comments[0].quoted == "- alpha"
 
 
 def test_state_of_an_unknown_document(conn: sqlite3.Connection) -> None:
@@ -172,8 +172,8 @@ def test_api_state_endpoint(api: TestClient) -> None:
     assert state["status"] == "changes_requested"
     assert state["version"] == 1
     assert state["decision_note"] == "see comments"
-    assert len(state["unresolved"]) == 1
-    assert state["unresolved"][0]["quoted"] == "- alpha"
+    assert len(state["open_comments"]) == 1
+    assert state["open_comments"][0]["quoted"] == "- alpha"
 
 
 def test_api_state_unknown_document_is_404(api: TestClient) -> None:

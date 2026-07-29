@@ -136,7 +136,7 @@ def test_mutating_endpoints_are_protected(lan: TestClient, local: TestClient) ->
     # Nothing changed.
     state = local.get("/api/documents/plan/state").json()
     assert state["status"] == "pending"
-    assert state["unresolved"] == []
+    assert state["open_comments"] == []
 
 
 def test_the_api_is_protected_too(lan: TestClient) -> None:

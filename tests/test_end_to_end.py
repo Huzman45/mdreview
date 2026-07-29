@@ -134,8 +134,8 @@ def test_the_agent_and_the_human_complete_a_review_together(live: Harness) -> No
     assert "  > - Migrate in one shot" in review.stdout
     assert "cannot hold the lock" in review.stdout
 
-    # 6. The agent revises, resolves, and resubmits.
-    assert live.cli("resolve", "plan", "C1").returncode == Exit.OK
+    # 6. The agent revises and resubmits; the resubmission is what closes
+    #    the comment out.
     plan.write_text(REVISED)
     assert live.cli("submit", "PLAN.md", "--slug", "plan", "--no-open").returncode == Exit.OK
 
@@ -242,15 +242,14 @@ def test_a_review_driven_from_the_source_and_diff_views(live: Harness) -> None:
     assert "  > DELETE FROM ledger WHERE id > 0;" in review.stdout
 
     # Revise and resubmit.
-    assert live.cli("resolve", "cutover", "C1").returncode == Exit.OK
     plan.write_text(FENCED_REVISED)
     assert (
         live.cli("submit", "CUTOVER.md", "--slug", "cutover", "--no-open").returncode == Exit.OK
     )
 
-    # The agent resolved it before resubmitting, so it stays resolved rather
-    # than being swept to outdated along with anything left open.
-    assert "note-resolved" in live.page("/d/cutover/v/1")
+    # The resubmission supersedes the comment; it stays readable against the
+    # version it was written on.
+    assert "note-outdated" in live.page("/d/cutover/v/1")
 
     # The diff shows precisely what changed, without re-reading the document.
     diff = live.page("/d/cutover/diff/1/2")

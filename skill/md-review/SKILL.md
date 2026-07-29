@@ -5,7 +5,7 @@ license: MIT
 compatibility: Requires the mdreview CLI on PATH.
 metadata:
   author: fjvillamarin
-  version: "2.0"
+  version: "2.1"
 ---
 
 # Reviewing a document with mdreview
@@ -67,13 +67,13 @@ say so and wait.
 
 ## Handling requested changes
 
-Exit 2 prints each unresolved comment with its reference, line range, the quoted
+Exit 2 prints each open comment with its reference, line range, the quoted
 source it refers to, and the user's note:
 
 ```
-STATUS: changes_requested   VERSION: 1   UNRESOLVED: 2
+STATUS: changes_requested   VERSION: 1   OPEN: 2
 
---- unresolved comments (2) ---
+--- open comments (2) ---
 
 [C1] L12-14
   > ## Phase 2: migrate the table in one shot
@@ -91,17 +91,15 @@ inside a fenced code block — so read the line range, not just the quote.
 Then:
 
 1. Edit the file to address each comment.
-2. Mark what you addressed:
-   ```bash
-   mdreview resolve <slug> C1 C2
-   ```
-3. Resubmit for another round, passing the same slug:
+2. Resubmit for another round, passing the same slug:
    ```bash
    mdreview submit PLAN.md --slug <slug>
    ```
-4. Tell the user a new version is up, and stop again.
+   Resubmitting supersedes the comments you just read; there is no bookkeeping
+   step, and you never mark a comment as done.
+3. Tell the user a new version is up, and stop again.
 
-If you disagree with a comment, do not silently resolve it. Say so in your
+If you disagree with a comment, do not silently work around it. Say so in your
 message to the user and let them decide.
 
 ## Write documents that use the renderer

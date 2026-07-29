@@ -396,7 +396,6 @@ li.mdr-block { list-style-position: outside; }
   font-size: 0.8rem;
   min-width: 0;
 }
-.note-resolved { border-left-color: var(--ok); opacity: 0.6; }
 .note-outdated { border-left-color: var(--rule); opacity: 0.45; }
 
 .note-head {
@@ -463,6 +462,42 @@ li.mdr-block { list-style-position: outside; }
   cursor: pointer;
 }
 .link-button:hover { text-decoration: underline; }
+.link-button-danger { color: var(--danger); }
+
+/* Edit and Delete sit on one quiet row; opening the editor takes the row. */
+.note-tools {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+.note-editor summary.link-button { display: inline-block; list-style: none; }
+.note-editor summary.link-button::-webkit-details-marker { display: none; }
+.note-editor[open] { flex-basis: 100%; }
+.note-editor textarea {
+  width: 100%;
+  margin-top: 0.35rem;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  background: var(--paper);
+  color: var(--ink);
+  resize: vertical;
+}
+.note-editor form button {
+  margin-top: 0.35rem;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 650;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--paper);
+  border-radius: 2px;
+  cursor: pointer;
+}
 
 /* ======================================================================= */
 /* Beyond variant A — the views the prototype never covered.               */
@@ -756,7 +791,7 @@ li.mdr-block { list-style-position: outside; }
   .mdr-block.referenced { box-shadow: -0.3rem 0 0 var(--refer), 0.3rem 0 0 var(--refer); }
 
   /* iOS zooms the viewport when focusing an input under 16px. */
-  .note-new textarea, .verdict-note { font-size: 16px; }
+  .note-new textarea, .note-editor textarea, .verdict-note { font-size: 16px; }
 
   .diff-no { width: 2rem; min-width: 2rem; padding: 0 0.25rem; }
   .rawline-no { flex-basis: 2.2rem; }

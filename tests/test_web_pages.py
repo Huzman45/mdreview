@@ -92,7 +92,7 @@ def test_index_is_empty_when_nothing_submitted(api: TestClient) -> None:
     assert "mdreview submit" in page
 
 
-def test_index_shows_unresolved_counts(api: TestClient) -> None:
+def test_index_shows_open_counts(api: TestClient) -> None:
     """The count is the whole point of the index: what is still outstanding."""
     submit(api)
     assert "open" not in api.get("/").text.split("Waiting for you")[1][:400]

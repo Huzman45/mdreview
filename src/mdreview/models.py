@@ -27,7 +27,6 @@ class ReviewStatus(StrEnum):
 
 class CommentState(StrEnum):
     OPEN = "open"
-    RESOLVED = "resolved"
     OUTDATED = "outdated"
 
 
@@ -89,6 +88,7 @@ class Comment:
     quoted: str
     body: str
     state: CommentState
+    edited_at: str | None
     created_at: str
 
     @classmethod
@@ -102,5 +102,6 @@ class Comment:
             quoted=row["quoted"],
             body=row["body"],
             state=CommentState(row["state"]),
+            edited_at=row["edited_at"],
             created_at=row["created_at"],
         )

@@ -5,7 +5,11 @@
 
    Keeps id="sidebar" because that is the htmx swap target every POST handler
    already returns. The new-note form sits after the existing notes, as in the
-   prototype. #}
+   prototype.
+
+   Notes belong to the reviewer, so an open note on a commentable version can
+   be edited (a <details> disclosure — no round-trip just to show the form) or
+   deleted (behind a confirm, since it destroys the reviewer's own writing). #}
 <aside class="margin" id="sidebar">
   {% for c in comments %}
   <div class="note note-{{ c.state.value }}" data-ref="{{ c.ref }}"
@@ -14,14 +18,26 @@
       <span class="note-ref">{{ c.ref }}</span>
       L{{ c.line_start }}{% if c.line_end != c.line_start %}–{{ c.line_end }}{% endif %}
       {% if c.state.value != "open" %} · {{ c.state.value }}{% endif %}
+      {% if c.edited_at %} · <span title="{{ c.edited_at }}">edited</span>{% endif %}
     </div>
     <pre class="note-quote">{{ c.quoted }}</pre>
     <p class="note-body">{{ c.body }}</p>
     {% if c.state.value == "open" and can_edit %}
-    <form hx-post="/d/{{ slug }}/v/{{ version.n }}/comments/{{ c.ref }}/resolve"
-          hx-target="#sidebar" hx-swap="outerHTML">
-      <button class="link-button" type="submit">Resolve</button>
-    </form>
+    <div class="note-tools">
+      <details class="note-editor">
+        <summary class="link-button">Edit</summary>
+        <form hx-post="/d/{{ slug }}/v/{{ version.n }}/comments/{{ c.ref }}/edit"
+              hx-target="#sidebar" hx-swap="outerHTML">
+          <textarea name="body" rows="3">{{ c.body }}</textarea>
+          <button type="submit">Save</button>
+        </form>
+      </details>
+      <form hx-post="/d/{{ slug }}/v/{{ version.n }}/comments/{{ c.ref }}/delete"
+            hx-target="#sidebar" hx-swap="outerHTML"
+            hx-confirm="Delete {{ c.ref }}? Its reference will not be reused.">
+        <button class="link-button link-button-danger" type="submit">Delete</button>
+      </form>
+    </div>
     {% endif %}
   </div>
   {% endfor %}

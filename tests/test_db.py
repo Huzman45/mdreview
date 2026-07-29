@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from mdreview import db
-from mdreview.migrations import SCHEMA_VERSION
+from mdreview.migrations import SCHEMA_VERSION, STEPS
 
 
 def test_connect_creates_parent_directory(tmp_path: Path) -> None:
@@ -77,6 +77,54 @@ def test_transaction_rolls_back_on_failure(tmp_path: Path) -> None:
         )
         raise RuntimeError("boom")
     assert conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0] == 0
+    conn.close()
+
+
+def test_migrating_a_schema_1_database_retires_resolved(tmp_path: Path) -> None:
+    """A database from before the lifecycle change carries `resolved` rows;
+    they become `outdated` — no longer outstanding, kept readable — and
+    nothing else about them changes."""
+    path = tmp_path / "db.sqlite"
+    conn = db.connect(path)
+    # Apply only the initial schema, then populate it the way version 1 could.
+    conn.executescript(f"BEGIN;\n{STEPS[0]}\nPRAGMA user_version = 1;\nCOMMIT;")
+    conn.executescript(
+        """
+        INSERT INTO documents (id, slug, title, created_at)
+            VALUES (1, 'p', 'P', '2026-01-01');
+        INSERT INTO versions (id, document_id, n, content, content_sha, status, created_at)
+            VALUES (1, 1, 1, '# P', 'sha', 'changes_requested', '2026-01-01');
+        INSERT INTO comments
+            (version_id, ref, line_start, line_end, quoted, body, state, created_at)
+            VALUES (1, 'C1', 1, 1, '# P', 'done already', 'resolved', '2026-01-01'),
+                   (1, 'C2', 1, 1, '# P', 'still open', 'open', '2026-01-01'),
+                   (1, 'C3', 1, 1, '# P', 'old round', 'outdated', '2026-01-01');
+        """
+    )
+    conn.close()
+
+    conn = db.connect(path)
+    assert db.migrate(conn) == SCHEMA_VERSION
+    rows = conn.execute(
+        "SELECT ref, state, body, edited_at FROM comments ORDER BY ref"
+    ).fetchall()
+    assert [(r["ref"], r["state"]) for r in rows] == [
+        ("C1", "outdated"),
+        ("C2", "open"),
+        ("C3", "outdated"),
+    ]
+    assert all(r["edited_at"] is None for r in rows)
+    assert rows[0]["body"] == "done already"
+    # The reference allocator starts at the existing high-water mark, so the
+    # next comment on this version would be C4, not a reused C1.
+    assert conn.execute("SELECT comment_seq FROM versions").fetchone()[0] == 3
+    # The narrowed constraint is live: `resolved` can no longer be stored.
+    with pytest.raises(sqlite3.IntegrityError):
+        conn.execute(
+            "INSERT INTO comments"
+            " (version_id, ref, line_start, line_end, quoted, body, state, created_at)"
+            " VALUES (1, 'C4', 1, 1, 'q', 'b', 'resolved', '2026-01-02')"
+        )
     conn.close()
 
 

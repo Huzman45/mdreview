@@ -220,7 +220,7 @@ def submit(
 class DocumentSummary:
     document: Document
     version: Version
-    unresolved: int = 0
+    open_count: int = 0
     """Open comments on the latest version — what is still outstanding."""
     total_versions: int = 1
 
@@ -236,7 +236,7 @@ def list_documents(
                v.status AS v_status, v.decision_note AS v_decision_note,
                v.decided_at AS v_decided_at, v.created_at AS v_created_at,
                (SELECT COUNT(*) FROM comments c
-                 WHERE c.version_id = v.id AND c.state = 'open') AS v_unresolved,
+                 WHERE c.version_id = v.id AND c.state = 'open') AS v_open,
                (SELECT COUNT(*) FROM versions vv
                  WHERE vv.document_id = d.id) AS v_total
         FROM documents d
@@ -265,7 +265,7 @@ def list_documents(
             DocumentSummary(
                 document=Document.from_row(row),
                 version=version,
-                unresolved=row["v_unresolved"],
+                open_count=row["v_open"],
                 total_versions=row["v_total"],
             )
         )
@@ -278,14 +278,19 @@ def list_documents(
 def next_ref(conn: sqlite3.Connection, version_id: int) -> str:
     """Allocate the next ``Cn`` reference for a version.
 
-    Numbering restarts per version and counts every comment ever made on it,
-    including resolved ones, so a reference is never reused for different
-    feedback. The UNIQUE constraint on (version_id, ref) is the backstop.
+    Numbering restarts per version and comes from a counter on the version,
+    not from the surviving rows: a deleted comment retires its reference
+    forever, so an agent that acted on yesterday's ``C2`` can never see
+    today's unrelated ``C2``. The UNIQUE constraint on (version_id, ref) is
+    the backstop.
     """
-    count = conn.execute(
-        "SELECT COUNT(*) FROM comments WHERE version_id = ?", (version_id,)
-    ).fetchone()[0]
-    return f"C{count + 1}"
+    row = conn.execute(
+        "UPDATE versions SET comment_seq = comment_seq + 1 WHERE id = ? RETURNING comment_seq",
+        (version_id,),
+    ).fetchone()
+    if row is None:  # pragma: no cover - callers hold a real version
+        raise NotFound("no such version")
+    return f"C{row[0]}"
 
 
 def create_comment(
@@ -360,19 +365,44 @@ def get_comment(conn: sqlite3.Connection, version_id: int, ref: str) -> Comment 
     return Comment.from_row(row) if row else None
 
 
-def resolve_comment(conn: sqlite3.Connection, version_id: int, ref: str) -> Comment:
-    """Mark a comment resolved. Idempotent for one already resolved."""
+def _require_open_comment(conn: sqlite3.Connection, version_id: int, ref: str) -> Comment:
     comment = get_comment(conn, version_id, ref)
     if comment is None:
         raise NotFound(f"no comment {ref!r} on this version")
-    if comment.state is CommentState.OPEN:
-        conn.execute(
-            "UPDATE comments SET state = ? WHERE id = ?",
-            (CommentState.RESOLVED.value, comment.id),
+    if comment.state is not CommentState.OPEN:
+        raise StoreError(
+            f"{ref} is {comment.state.value}; superseded feedback is a record "
+            f"of a past round and cannot be changed"
         )
-        comment = get_comment(conn, version_id, ref)
-        assert comment is not None
     return comment
+
+
+def update_comment(
+    conn: sqlite3.Connection, version_id: int, ref: str, *, body: str
+) -> Comment:
+    """Replace an open comment's body.
+
+    The anchor and the quoted source are immutable — an edit changes what the
+    note says, never what it points at — so the quote captured at creation
+    stays valid. The edit is stamped so the page can show it happened; an agent
+    may already have read the previous body.
+    """
+    if not body.strip():
+        raise StoreError("refusing to store an empty comment")
+    comment = _require_open_comment(conn, version_id, ref)
+    conn.execute(
+        "UPDATE comments SET body = ?, edited_at = ? WHERE id = ?",
+        (body.strip(), now(), comment.id),
+    )
+    comment = get_comment(conn, version_id, ref)
+    assert comment is not None
+    return comment
+
+
+def delete_comment(conn: sqlite3.Connection, version_id: int, ref: str) -> None:
+    """Remove an open comment. Its reference is retired, never reallocated."""
+    comment = _require_open_comment(conn, version_id, ref)
+    conn.execute("DELETE FROM comments WHERE id = ?", (comment.id,))
 
 
 def outdate_open_comments(conn: sqlite3.Connection, document_id: int) -> int:
@@ -392,7 +422,7 @@ def outdate_open_comments(conn: sqlite3.Connection, document_id: int) -> int:
     return cursor.rowcount
 
 
-def count_unresolved(conn: sqlite3.Connection, version_id: int) -> int:
+def count_open(conn: sqlite3.Connection, version_id: int) -> int:
     return conn.execute(
         "SELECT COUNT(*) FROM comments WHERE version_id = ? AND state = ?",
         (version_id, CommentState.OPEN.value),
@@ -441,7 +471,7 @@ def decide(
     # revision request it cannot act on.
     if (
         status is ReviewStatus.CHANGES_REQUESTED
-        and count_unresolved(conn, version.id) == 0
+        and count_open(conn, version.id) == 0
         and note is None
     ):
         raise StoreError("requesting changes needs at least one open comment or a summary note")
@@ -460,7 +490,7 @@ class DocumentState:
 
     document: Document
     version: Version
-    unresolved: tuple[Comment, ...]
+    open_comments: tuple[Comment, ...]
 
     @property
     def status(self) -> ReviewStatus:
@@ -475,5 +505,5 @@ def document_state(conn: sqlite3.Connection, slug: str) -> DocumentState:
     return DocumentState(
         document=document,
         version=version,
-        unresolved=tuple(open_comments(conn, version.id)),
+        open_comments=tuple(open_comments(conn, version.id)),
     )
