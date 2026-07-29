@@ -3,7 +3,6 @@
 ## Purpose
 Accepting markdown and recording it as an immutable, content-hashed version
 belonging to a named document.
-
 ## Requirements
 ### Requirement: Submitting markdown creates a reviewable version
 The system SHALL accept markdown content under a document name and record it as a
@@ -41,7 +40,8 @@ and its SHA-256 digest, so that any anchor into it remains valid forever.
 
 ### Requirement: Resubmission creates a successive version
 Submitting a document again SHALL open a new review round as a new version, numbered
-sequentially per document.
+sequentially per document. If the document was archived, submitting a new version
+reactivates it: a round the reviewer cannot see is a round that does not exist.
 
 #### Scenario: Revised content becomes the next version
 - **GIVEN** a document whose latest version is 1
@@ -54,6 +54,12 @@ sequentially per document.
 - **WHEN** a second version is submitted for one of them
 - **THEN** that document has versions 1 and 2
 - **AND** the other document still has only version 1
+
+#### Scenario: Resubmission reactivates an archived document
+- **GIVEN** an archived document
+- **WHEN** a new version is submitted under its slug
+- **THEN** the document is no longer archived
+- **AND** the new version appears on the index awaiting review
 
 ### Requirement: Unchanged resubmission does not create a redundant version
 To keep the review history meaningful, resubmitting byte-identical content SHALL NOT
@@ -71,14 +77,22 @@ create a new version.
 - **THEN** a new version is created so that a fresh decision can be recorded
 
 ### Requirement: Documents record their provenance
-A document SHALL record where it came from, so a reviewer facing several pending
-reviews can tell which agent in which project is waiting.
+A document SHALL record where it came from — project path, originating agent
+tool, and agent session — so a reviewer facing several pending reviews can
+tell which conversation in which project is waiting, and can find their way
+back to it.
 
 #### Scenario: Provenance is captured at submission
 - **WHEN** a document is submitted with a title, an originating project path, and an
   agent session identifier
 - **THEN** those values are stored on the document
 - **AND** they are shown on the review page and in the pending list
+
+#### Scenario: The session tool is stored beside the identifier
+- **WHEN** a document is submitted from within an agent session
+- **THEN** the document records which tool the session belongs to
+- **AND** the tool is recorded even when the session identifier is
+  unavailable
 
 #### Scenario: Slug is derived when not supplied
 - **WHEN** a document is submitted without an explicit slug

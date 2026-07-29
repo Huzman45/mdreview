@@ -33,8 +33,10 @@ SHALL state what to do for each documented exit status.
 
 #### Scenario: Changes requested drives a revision
 - **WHEN** the review command exits 2
-- **THEN** the skill instructs the agent to address each comment, resolve the ones it
-  has addressed, and resubmit the revised file for a further round
+- **THEN** the skill instructs the agent to address each comment and resubmit the
+  revised file under the same slug for a further round
+- **AND** does not instruct any bookkeeping on the comments themselves, since
+  resubmission supersedes them
 
 #### Scenario: Pending outcome does not proceed
 - **WHEN** the review command exits 3
@@ -66,6 +68,8 @@ CLI and the skill.
 - **THEN** the CLI is placed on their `PATH`
 - **AND** the skill is installed where both opencode and Claude Code will find it,
   from one source of truth rather than two copies that can diverge
+- **AND** the opencode session plugin is installed, so submissions from
+  opencode carry their session identity
 
 #### Scenario: Re-running the setup refreshes a stale skill
 - **WHEN** the skill file in the repository has changed and the setup command is run
@@ -123,4 +127,26 @@ network, since the reviewer cannot discover this from the default output.
 - **WHEN** an agent reads the skill
 - **THEN** it learns the private address changes with DHCP, and that a link which
   stops loading probably means the address moved
+
+### Requirement: The skill offers a hands-free way to learn the outcome
+The skill SHALL instruct agents whose harness supports background tasks to
+start `await` in the background after submitting, and to branch on the
+completed task's exit code exactly as for `review` — while restating that no
+review command may ever hold the agent's turn open in the foreground.
+
+#### Scenario: Background awaiting is taught beside submit-and-stop
+- **WHEN** an agent reads the skill's submission flow
+- **THEN** it is instructed to start the await command as a background task
+  when its harness offers one
+- **AND** to end its turn as before rather than waiting in the foreground
+
+#### Scenario: The completed wait is read like a review
+- **WHEN** the background await completes
+- **THEN** the skill instructs the agent to branch on its exit code with the
+  same mapping as the review command
+
+#### Scenario: Harnesses without background tasks lose nothing
+- **WHEN** an agent's harness cannot run background tasks
+- **THEN** the skill's flow is unchanged: submit, report the URL, stop, and
+  read the outcome when nudged
 
