@@ -678,6 +678,19 @@ li.mdr-block { list-style-position: outside; }
   font-style: italic;
 }
 
+/* A day inside a group: same small-caps voice as the group head, one step
+   quieter — no rule, no count. */
+.docgroup-day {
+  margin: 1.1rem 0 0.1rem;
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+.docgroup-head + .docgroup-day { margin-top: 0.2rem; }
+
 .doclist { display: flex; flex-direction: column; }
 
 /* The row wraps a link and a row action; the button cannot live inside the
