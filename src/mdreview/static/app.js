@@ -203,20 +203,6 @@
     }
   });
 
-  // Highlight the block a comment refers to when hovering the comment.
-  document.addEventListener("mouseover", function (event) {
-    var item = event.target.closest(".comment");
-    if (!item) return;
-    var start = item.getAttribute("data-line-start");
-    var block = document.querySelector('.mdr-block[data-line-start="' + start + '"]');
-    if (block) block.classList.add("referenced");
-  });
-
-  document.addEventListener("mouseout", function (event) {
-    var item = event.target.closest(".comment");
-    if (!item) return;
-    document.querySelectorAll(".referenced").forEach(function (el) {
-      el.classList.remove("referenced");
-    });
-  });
+  // Hovering a note highlights its passage — that lives in anchors.js,
+  // which owns the note-to-text relationship.
 })();
