@@ -117,3 +117,46 @@ def test_render_list_is_readable() -> None:
 
 def test_render_list_handles_nothing() -> None:
     assert report.render_list([]) == "No documents."
+
+
+# -- source mapping for assembled documents ----------------------------------
+
+ASSEMBLED = (
+    "# proposal.md\n\nWhy we do this.\n\nMore why.\n\n"   # heading L1, content L3-5
+    "# specs/agent-cli/spec.md\n\nA requirement.\nA scenario.\n"  # heading L7
+)
+
+
+def test_section_marks_need_two_headings() -> None:
+    assert report.section_marks("# title.md\n\nBody.\n") == []
+    assert report.section_marks(None) == []
+    assert report.section_marks("# Plain Title\n\n# another one\n") == []
+
+
+def test_section_marks_find_assembly_headings() -> None:
+    assert report.section_marks(ASSEMBLED) == [
+        (1, "proposal.md"),
+        (7, "specs/agent-cli/spec.md"),
+    ]
+
+
+def test_source_label_maps_lines_ranges_and_headings() -> None:
+    marks = report.section_marks(ASSEMBLED)
+    # Assembly line 3 is "Why we do this." — line 1 of proposal.md itself.
+    assert report.source_label(marks, 3, 3) == "proposal.md:1"
+    assert report.source_label(marks, 9, 10) == "specs/agent-cli/spec.md:1-2"
+    assert report.source_label(marks, 7, 7) == "specs/agent-cli/spec.md, file heading"
+
+
+def test_render_state_annotates_comments_with_their_source() -> None:
+    comment = {**COMMENT, "line_start": 9, "line_end": 9}
+    output = report.render_state(state(open_comments=[comment]), ASSEMBLED)
+    assert "[C1] L9 (specs/agent-cli/spec.md:1)" in output
+    assert "same files in the same order" in output
+
+
+def test_render_state_without_content_is_unannotated() -> None:
+    output = report.render_state(state())
+    assert "(proposal.md" not in output
+    assert "[C1] L12-14" in output
+    assert report.REVISE_NOTE in output

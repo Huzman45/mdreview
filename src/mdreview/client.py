@@ -127,6 +127,17 @@ class Client:
     def get(self, path: str, **kwargs: Any) -> Any:
         return self.request("GET", path, **kwargs)
 
+    def get_text(self, path: str, **kwargs: Any) -> str:
+        """GET a plain-text resource verbatim; the JSON decode would mangle it."""
+        self.ensure_up()
+        try:
+            response = self._http.get(path, **kwargs)
+        except httpx.HTTPError as exc:
+            raise ApiUnreachable(f"request to {path} failed: {exc}") from exc
+        if response.status_code >= 400:
+            raise ApiError(response.status_code, _detail(response))
+        return response.text
+
     def post(self, path: str, **kwargs: Any) -> Any:
         return self.request("POST", path, **kwargs)
 

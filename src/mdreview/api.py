@@ -7,6 +7,7 @@ from collections.abc import Iterator
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
 from . import db, store
@@ -252,6 +253,17 @@ def get_comments(
         CommentResponse.of(comment)
         for comment in store.list_comments(conn, version.id, states=states)
     ]
+
+
+@router.get("/documents/{slug}/versions/{n}/content", response_class=PlainTextResponse)
+def get_version_content(slug: str, n: int, conn: Conn) -> str:
+    """The stored markdown, verbatim.
+
+    Plain text rather than JSON because the consumer wants the bytes it
+    submitted — this is what lets the CLI map comment ranges back to the
+    files of an assembled document without the server knowing about files.
+    """
+    return _version(conn, slug, n).content
 
 
 # -- decisions --------------------------------------------------------------
