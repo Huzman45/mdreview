@@ -31,11 +31,10 @@ def fire_decision(
 ) -> None:
     """Announce a decision that has already been committed.
 
-    Returns the moment the delivery thread is running, never later: the caller
-    is a request handler whose reviewer is waiting on a button, and no listener
-    gets to make them wait longer. Spawning is itself guarded, because a
-    handler that raised here would fail a decision that is already recorded —
-    the one outcome this whole module exists to prevent.
+    Returns as soon as the delivery thread is running, never later: the caller
+    is a request handler whose reviewer is waiting on a button. Spawning is
+    itself guarded, because a handler that raised here would fail a decision
+    that is already recorded — the outcome this module exists to prevent.
 
     The payload carries the decision's own facts so a consumer can act on the
     event directly; the state endpoint stays authoritative for anything more.
@@ -54,16 +53,12 @@ def fire_decision(
 
 
 def _deliver(url: str, payload: dict[str, Any]) -> None:
-    """Post once, and forget the outcome including a failed one.
+    """Post once and forget the outcome, including a failed one.
 
-    Nothing here has anything useful to do with an error: there is no caller
-    left to return it to and, by design, no retry to schedule. The timeout is
-    the only thing that matters, and only so that an unresponsive listener
-    releases the thread rather than pinning it.
-
-    Unlike the CLI's client this one leaves `trust_env` alone. That client
-    refuses proxies because it may only ever talk to loopback; a webhook points
-    wherever the operator's listener actually is, which may be through one.
+    There is no caller left to return an error to and, by design, no retry to
+    schedule. `trust_env` is deliberately left on, unlike the CLI's client: that
+    one refuses proxies because it may only ever reach loopback, whereas a
+    webhook points wherever the operator's listener is.
     """
     with contextlib.suppress(Exception):
         httpx.post(url, json=payload, timeout=TIMEOUT)
