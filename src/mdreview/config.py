@@ -86,19 +86,12 @@ def allow_lan_enabled() -> bool:
 
 
 def default_webhook_url() -> str | None:
-    """Where a recorded decision is announced, if anywhere.
-
-    Unset is the ordinary case: the review loop is complete without a listener.
-    """
+    """Where a recorded decision is announced, if anywhere."""
     return os.environ.get(ENV_WEBHOOK_URL, "").strip() or None
 
 
 def default_webhook_token() -> str | None:
-    """The bearer token presented to the webhook receiver, if it wants one.
-
-    A receiver that acts on a decision has its own reasons to authenticate its
-    callers, and a URL alone cannot carry an `Authorization` header.
-    """
+    """The bearer token presented to that endpoint, if it wants one."""
     return os.environ.get(ENV_WEBHOOK_TOKEN, "").strip() or None
 
 

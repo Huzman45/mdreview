@@ -87,6 +87,18 @@ deduplication window, or delivered-flag column. The constraint that already
 protects the agent from acting on a reversed decision protects the consumer
 from acting on a duplicate one.
 
+One qualification, since this change states the guarantee to users: it is
+advisory rather than absolute. `decide` tests `version.status.is_decided` in
+Python and then issues an unguarded `UPDATE`, so two genuinely concurrent
+decisions on one pending version could both pass the check and both announce.
+Decisions are human-paced and this has never been reachable in practice, but
+the two-server shape the README already describes — a loopback server and the
+LAN service over one database — makes it less hypothetical than single-process
+reasoning suggests. Making it absolute costs a `WHERE id = ? AND status =
+'pending'` and a `rowcount == 0 → Conflict`; that belongs to `review-decisions`
+proper rather than to the hook, and this change deliberately does not touch the
+SQL layer.
+
 ### D5. The archive cancellation is left out of this change
 
 `archive_document` records `cancelled` through `decide`, with the note

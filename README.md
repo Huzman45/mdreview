@@ -233,7 +233,7 @@ Bookmark your machine's Bonjour name on the tablet rather than an IP —
 `http://<your-hostname>.local:7391/?t=<token>` — because the name survives DHCP
 changes and a literal address does not.
 
-Two things worth knowing:
+Three things worth knowing:
 
 - Once installed, the server is running whenever you are logged in. Rotating the
   token is how you revoke a device, not stopping the server.
@@ -241,6 +241,11 @@ Two things worth knowing:
   the loopback server, which needs no token. From another device it resolves to the
   private address and the token is required. Do not read a token-less `200` on your
   own machine as the guard being off.
+- The service does not read your shell profile, so `MDREVIEW_*` variables set in
+  `~/.zshrc` do not reach it. This is most visible with the decision webhook: the
+  loopback server the agent starts inherits your environment and fires it, while
+  the installed service does not — so the same decision announces from your
+  laptop and stays silent from the tablet, with no error either way.
 
 A server binds one address, so a LAN-bound server is not listening on loopback.
 The agent will simply start its own loopback server on demand, and the two share
