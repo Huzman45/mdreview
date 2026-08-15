@@ -20,6 +20,7 @@ ENV_DATA_DIR = "MDREVIEW_DATA_DIR"
 ENV_AUTOSTART = "MDREVIEW_AUTOSTART"
 ENV_ALLOW_LAN = "MDREVIEW_ALLOW_LAN"
 ENV_WEBHOOK_URL = "MDREVIEW_WEBHOOK_URL"
+ENV_WEBHOOK_TOKEN = "MDREVIEW_WEBHOOK_TOKEN"
 
 
 def data_dir() -> Path:
@@ -87,11 +88,18 @@ def allow_lan_enabled() -> bool:
 def default_webhook_url() -> str | None:
     """Where a recorded decision is announced, if anywhere.
 
-    Unset is the ordinary case and means nothing is sent: the review loop is
-    complete without a listener, and this only spares one that exists from
-    polling for an event the server already knows about.
+    Unset is the ordinary case: the review loop is complete without a listener.
     """
     return os.environ.get(ENV_WEBHOOK_URL, "").strip() or None
+
+
+def default_webhook_token() -> str | None:
+    """The bearer token presented to the webhook receiver, if it wants one.
+
+    A receiver that acts on a decision has its own reasons to authenticate its
+    callers, and a URL alone cannot carry an `Authorization` header.
+    """
+    return os.environ.get(ENV_WEBHOOK_TOKEN, "").strip() or None
 
 
 def is_loopback(host: str) -> bool:
@@ -146,6 +154,7 @@ class Settings:
     database: Path
     allow_lan: bool = False
     webhook_url: str | None = None
+    webhook_token: str | None = None
 
     @classmethod
     def load(
@@ -156,6 +165,7 @@ class Settings:
         database: Path | None = None,
         allow_lan: bool = False,
         webhook_url: str | None = None,
+        webhook_token: str | None = None,
     ) -> Settings:
         allow_lan = allow_lan or allow_lan_enabled()
         return cls(
@@ -166,6 +176,9 @@ class Settings:
             database=database if database is not None else db_path(),
             allow_lan=allow_lan,
             webhook_url=webhook_url if webhook_url is not None else default_webhook_url(),
+            webhook_token=(
+                webhook_token if webhook_token is not None else default_webhook_token()
+            ),
         )
 
     @property

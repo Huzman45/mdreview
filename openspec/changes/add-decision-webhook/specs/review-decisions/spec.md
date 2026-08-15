@@ -41,3 +41,27 @@ was down would be worse than one that never announced anything.
 - **GIVEN** no configured endpoint
 - **WHEN** the reviewer records a decision
 - **THEN** no request is sent
+
+### Requirement: The announcement can authenticate to its receiver
+A receiver that acts on a decision SHALL be reachable even when it requires its
+callers to authenticate. When a token is configured, the announcement SHALL
+present it as a bearer credential; when none is configured, the announcement
+SHALL carry no authentication and behave exactly as before. A rejected
+credential SHALL be treated as any other delivery failure.
+
+#### Scenario: A configured token is presented
+- **GIVEN** a configured endpoint and a configured token
+- **WHEN** the reviewer records a decision
+- **THEN** the request carries that token as a bearer credential in its
+  `Authorization` header
+
+#### Scenario: No token configured
+- **GIVEN** a configured endpoint and no configured token
+- **WHEN** the reviewer records a decision
+- **THEN** the request carries no `Authorization` header
+
+#### Scenario: A rejected token does not affect the decision
+- **GIVEN** a configured endpoint that rejects the credential
+- **WHEN** the reviewer records a decision
+- **THEN** the decision is recorded and reported as successful
+- **AND** the reviewer sees no error

@@ -8,10 +8,14 @@
   has committed
 - [x] 1.4 Fire from the API's decision endpoint, after `store.decide` has
   committed
-- [x] 1.5 README: the variable, the payload, and the at-most-once contract
+- [x] 1.5 `MDREVIEW_WEBHOOK_TOKEN`, its loader and `Settings` field, sent as
+  `Authorization: Bearer <token>` when set and omitted entirely when not
+- [x] 1.6 README: both variables, the payload, the header, and the
+  at-most-once contract
 
 ## 2. Verification
 
 - [x] 2.1 A decision with an endpoint configured sends exactly one request
-  carrying the slug and version
+  carrying the slug and version, with the bearer header present when a token
+  is configured and absent when it is not
 - [x] 2.2 Full suite, ruff check and format

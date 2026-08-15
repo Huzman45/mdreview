@@ -35,17 +35,31 @@ listener and keeps that decision in its own process, not in this one.
 
 ### D2. Failure is invisible, by construction
 
-`fire_decision` catches `BaseException` around the whole delivery and returns
-nothing. This is deliberately broader than the `except httpx.HTTPError` that
-would cover the expected failures: the value being protected is that a review
-tool never fails a recorded decision because of a listener, and that value
-should not depend on having enumerated the failure modes correctly. The
-decision is already committed by the time the call is reached (D3), so there
-is nothing to roll back and nothing a caught error could usefully change.
+`fire_decision` suppresses `Exception` around both the delivery and the thread
+spawn, and returns nothing. This is deliberately broader than the
+`except httpx.HTTPError` that would cover the expected failures: the value
+being protected is that a review tool never fails a recorded decision because
+of a listener, and that value should not depend on having enumerated the
+failure modes correctly. The decision is already committed by the time the call
+is reached (D3), so there is nothing to roll back and nothing a caught error
+could usefully change.
 
-The cost is that a misconfigured URL is silent. Accepted: the alternative is
-surfacing an infrastructure error in the reviewer's sidebar, next to a
-decision that was in fact recorded.
+Guarding the *spawn* matters as much as guarding the POST. An exception raised
+on the delivery thread cannot reach the handler at all, so the only way an
+announcement could still fail a decision is `Thread.start()` raising in the
+handler itself — under thread exhaustion — after the row is committed. That
+narrow case is what the outer suppression closes.
+
+`BaseException` was considered and rejected: around a daemon thread's bootstrap
+it would swallow `SystemExit` and `KeyboardInterrupt` during interpreter
+shutdown, and every failure worth surviving here is an ordinary exception.
+
+The cost is that a misconfigured URL is silent, and — since D8 — so is a
+rejected token: a 401 is just another response the sender never reads. Accepted
+in the reviewer's sidebar, which is the point. It is also silent in the server
+log, which is a consequence of this codebase having no logging rather than a
+decision about webhooks; recorded here so the next reader takes it as chosen
+rather than overlooked.
 
 ### D3. Fired after the commit, from the request layer
 
@@ -107,7 +121,40 @@ configured once for the machine and then forgotten, which is what an
 environment variable is for. It follows `config.py`'s established shape all
 the same: a module constant for the name, a loader that reads it, and a
 `Settings` field that carries the resolved value, so the request handlers read
-settings rather than the environment.
+settings rather than the environment. `MDREVIEW_WEBHOOK_TOKEN` (D8) follows the
+identical shape, which is also why it is an environment variable rather than a
+flag: a secret does not belong in a command line, where it lands in shell
+history and in every `ps` listing on the machine.
+
+### D8. Optional bearer, and nothing more
+
+A receiver worth notifying often does something privileged with the news, and
+anything privileged has to authenticate its callers. A URL is the only thing
+this feature otherwise carries, and a URL cannot express an `Authorization`
+header — so without a token the hook can target only completely
+unauthenticated endpoints. That is a strange limitation for a tool whose own
+design refuses public binds *because* it has no authentication.
+
+`MDREVIEW_WEBHOOK_TOKEN` therefore adds exactly one header,
+`Authorization: Bearer <token>`, and only when it is set. Bearer was chosen
+over the alternatives because it assumes least: it is the scheme
+(RFC 6750) that receivers behind an API gateway, a reverse proxy, or a
+framework's auth middleware already accept without configuration. A
+query-string token would leak into the receiver's access logs and into any
+redirect; a custom header name would require the operator to configure both
+ends to agree on a spelling; basic auth would imply a username that does not
+exist here.
+
+The token is a value carried from the environment into one outbound header. It
+is never logged, never rendered into a page, and never returned by any
+endpoint. Because the sender never reads the response (D2), a receiver that
+rejects the token is indistinguishable here from one that is switched off — the
+right outcome, since neither is the deciding reviewer's problem, but worth
+stating because it means a wrong token fails silently.
+
+Note that the token authenticates mdreview *to* the receiver. It does not prove
+to the receiver that a given request came from mdreview and was not tampered
+with; that is signing, which the proposal keeps out of scope.
 
 ## Risks / Trade-offs
 
@@ -123,4 +170,14 @@ settings rather than the environment.
   stop`.
 - **The payload is a contract now.** Kept to facts about the decision, which
   are the fields least likely to need to change; additions stay backward
-  compatible for any consumer reading by key.
+  compatible for any consumer reading by key. Nothing in it is shaped for a
+  particular consumer — no event type, no routing discriminator — because a
+  field that exists for one listener's dispatch logic is a field every other
+  listener has to ignore forever.
+- **A token sent over plain HTTP is exposed to anyone on the path.** The
+  operator chooses the URL; an `https://` receiver protects the token, an
+  `http://` one on an untrusted network does not. Consistent with the rest of
+  the tool, which is plaintext by design and says so, but it is the operator's
+  call to make knowingly — hence the README saying it outright.
+- **A wrong token is silent** (D2, D8). The failure mode of a misconfigured
+  receiver is "nothing arrives", which looks identical to a misconfigured URL.

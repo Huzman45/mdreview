@@ -28,6 +28,7 @@ def fire_decision(
     status: str,
     note: str | None,
     decided_at: str | None,
+    token: str | None = None,
 ) -> None:
     """Announce a decision that has already been committed.
 
@@ -48,17 +49,20 @@ def fire_decision(
         "note": note,
         "decided_at": decided_at,
     }
+    headers = {"Authorization": f"Bearer {token}"} if token else None
     with contextlib.suppress(Exception):
-        threading.Thread(target=_deliver, args=(url, payload), daemon=True).start()
+        threading.Thread(target=_deliver, args=(url, payload, headers), daemon=True).start()
 
 
-def _deliver(url: str, payload: dict[str, Any]) -> None:
+def _deliver(url: str, payload: dict[str, Any], headers: dict[str, str] | None) -> None:
     """Post once and forget the outcome, including a failed one.
 
     There is no caller left to return an error to and, by design, no retry to
-    schedule. `trust_env` is deliberately left on, unlike the CLI's client: that
-    one refuses proxies because it may only ever reach loopback, whereas a
-    webhook points wherever the operator's listener is.
+    schedule — a receiver that rejects the token is as silent here as one that
+    is switched off, because neither is the deciding reviewer's problem.
+    `trust_env` is deliberately left on, unlike the CLI's client: that one
+    refuses proxies because it may only ever reach loopback, whereas a webhook
+    points wherever the operator's listener is.
     """
     with contextlib.suppress(Exception):
-        httpx.post(url, json=payload, timeout=TIMEOUT)
+        httpx.post(url, json=payload, headers=headers, timeout=TIMEOUT)

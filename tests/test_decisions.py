@@ -257,19 +257,26 @@ def test_index_distinguishes_pending_from_decided(api: TestClient) -> None:
     assert "/d/alpha" not in waiting
 
 
+@pytest.mark.parametrize("token", [None, "s3cr3t"])
 def test_a_decision_is_announced_to_the_configured_webhook(
-    settings: Settings, monkeypatch: pytest.MonkeyPatch
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, token: str | None
 ) -> None:
     """The listener is faked at the transport so the suite never opens a socket.
 
     Delivery is off-thread, so the fake signals an event rather than the test
-    sleeping for a duration it would have to guess at."""
+    sleeping for a duration it would have to guess at. The token is pinned both
+    ways round: the suite runs inside an agent session whose environment it
+    would otherwise inherit."""
     monkeypatch.setenv("MDREVIEW_WEBHOOK_URL", "http://listener.invalid/decisions")
+    if token is None:
+        monkeypatch.delenv("MDREVIEW_WEBHOOK_TOKEN", raising=False)
+    else:
+        monkeypatch.setenv("MDREVIEW_WEBHOOK_TOKEN", token)
     posted: list[tuple[str, Any]] = []
     delivered = threading.Event()
 
     def capture(url: str, **kwargs: Any) -> httpx.Response:
-        posted.append((url, kwargs["json"]))
+        posted.append((url, kwargs))
         delivered.set()
         return httpx.Response(200)
 
@@ -284,11 +291,17 @@ def test_a_decision_is_announced_to_the_configured_webhook(
 
     assert delivered.wait(timeout=5)
     assert len(posted) == 1
-    url, payload = posted[0]
+    url, sent = posted[0]
     assert url == "http://listener.invalid/decisions"
-    assert payload["slug"] == "plan"
-    assert payload["version"] == 1
-    assert payload["status"] == "approved"
+    assert sent["json"]["slug"] == "plan"
+    assert sent["json"]["version"] == 1
+    assert sent["json"]["status"] == "approved"
+
+    headers = sent["headers"] or {}
+    if token is None:
+        assert "Authorization" not in headers
+    else:
+        assert headers["Authorization"] == "Bearer s3cr3t"
 
 
 def test_api_pending_filter_excludes_decided(api: TestClient) -> None:

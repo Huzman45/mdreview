@@ -386,6 +386,7 @@ def record_decision(
         status=refreshed.status.value,
         note=refreshed.decision_note,
         decided_at=refreshed.decided_at,
+        token=settings.webhook_token,
     )
     return _sidebar(request, conn, document, refreshed)
 

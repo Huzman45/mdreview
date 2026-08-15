@@ -27,10 +27,19 @@ observe an event that happens a handful of times a day.
 - **Recording a decision POSTs a small JSON body to it**: the slug, the version
   number, the status, the decision note, and the decision timestamp. Enough to
   act on without a follow-up read; nothing that presumes what the consumer is.
+- **`MDREVIEW_WEBHOOK_TOKEN` presents a bearer token when the receiver wants
+  one.** Set, the POST carries `Authorization: Bearer <token>`; unset, it
+  carries no such header and nothing changes. A receiver that does anything
+  privileged on a decision has its own reason to authenticate its callers, and
+  a URL cannot carry an `Authorization` header — so without this the hook can
+  only ever target a completely unauthenticated endpoint. For a tool that
+  refuses public binds precisely because it has no authentication of its own,
+  being unable to talk to anything that does is an awkward gap.
 - **Delivery never touches the review.** The POST goes out on a daemon thread
-  and every failure — refused connection, timeout, 500, malformed URL — is
-  swallowed. A reviewer clicking Approve must not see an error, or a delay,
-  because a listener somewhere is down.
+  and every failure — refused connection, timeout, 500, rejected token,
+  malformed URL — is swallowed. A reviewer clicking Approve must not see an
+  error, or a delay, because a listener somewhere is down or does not like the
+  token.
 - **Both decision surfaces fire it**: the browser button and the REST endpoint.
   `store.decide` is the single chokepoint they share and it admits exactly one
   decision per version, so a decided version emits exactly one event.
@@ -51,16 +60,27 @@ observe an event that happens a handful of times a day.
   to garbage-collect — a message broker grown inside a single-user local tool.
 - **Several endpoints.** One URL covers the cases above; a consumer that needs
   fan-out is a consumer that should own a fan-out.
-- **Signing or authentication of the callback.** The server itself is
-  unauthenticated by design and loopback by default; a signature here would
-  guard the second door of a house with the first one open.
+- **Signing the callback.** Presenting a bearer token proves to the receiver
+  that the caller is authorised; an HMAC signature over the body would prove
+  the message came from *this* server and was not altered. That is the opposite
+  direction and a larger commitment — a shared secret, a canonical body
+  encoding, a documented verification recipe — and the server it would speak
+  for is itself unauthenticated by design and loopback by default. Nothing here
+  precludes it.
+- **Any scheme other than bearer.** No basic auth, no per-receiver custom
+  header names, no OAuth refresh. One token in one standard header is the
+  least-opinionated thing that works with an authenticated receiver; anything
+  more starts encoding assumptions about who is listening.
 - **Announcing the cancellation that `archive` records.** See design D5: it is
   a `document-lifecycle` act, and reaching it cleanly is a separate change.
 - **Blocking the decision on delivery.** The reason the thread is a daemon.
 
 ## Impact
 
-- `config.py` (one environment variable, its loader, one `Settings` field), a
-  new `notify.py`, one call each in `web.py` and `api.py`, README. No schema
-  change, no API surface change, no new dependency — `httpx` is already used by
-  the CLI client.
+- `config.py` (two environment variables, their loaders, two `Settings`
+  fields), a new `notify.py`, one call each in `web.py` and `api.py`, README.
+  No schema change, no API surface change, no new dependency — `httpx` is
+  already used by the CLI client.
+- The token is read from the environment and held in `Settings` beside the URL.
+  It is never logged, never rendered, and never returned by any endpoint; the
+  only thing that happens to it is being put in an outbound header.

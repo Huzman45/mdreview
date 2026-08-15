@@ -305,6 +305,7 @@ def decide(
         status=updated.status.value,
         note=updated.decision_note,
         decided_at=updated.decided_at,
+        token=settings.webhook_token,
     )
 
     return VersionSummary(

@@ -183,6 +183,7 @@ vendored and loaded only on pages that actually contain a diagram.
 | `MDREVIEW_AUTOSTART` | `1` | Set `0` to fail instead of starting a server |
 | `MDREVIEW_ALLOW_LAN` | `0` | Set `1` to permit a private-LAN bind |
 | `MDREVIEW_WEBHOOK_URL` | unset | POST every decision here as it is recorded |
+| `MDREVIEW_WEBHOOK_TOKEN` | unset | Bearer token presented to that endpoint |
 
 The server refuses to bind outside loopback by default: it has no authentication,
 so listening on a routable interface would expose every document to the network.
@@ -276,6 +277,17 @@ endpoint and each recorded decision is POSTed to it as JSON:
 
 Both the review page and the API fire it, and a version can only be decided
 once, so each version produces at most one call.
+
+If the receiver authenticates its callers, set `MDREVIEW_WEBHOOK_TOKEN` and the
+POST carries it as a bearer credential:
+
+```
+Authorization: Bearer <token>
+```
+
+Leave it unset and no `Authorization` header is sent. Note that the token is
+only as protected as the URL it is sent to: over `http://` on an untrusted
+network it travels in the clear, like everything else this tool sends.
 
 Delivery is fire-and-forget: it happens on a background thread and every
 failure is ignored, because a listener being down must never fail a decision
