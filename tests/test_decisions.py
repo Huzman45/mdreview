@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
 from collections.abc import Iterator
+from typing import Any
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from mdreview import store
+from mdreview import notify, store
 from mdreview.config import Settings
 from mdreview.models import ReviewStatus
 from mdreview.server import create_app
@@ -252,6 +255,40 @@ def test_index_distinguishes_pending_from_decided(api: TestClient) -> None:
     assert "/d/beta" in waiting
     assert "/d/alpha" in decided
     assert "/d/alpha" not in waiting
+
+
+def test_a_decision_is_announced_to_the_configured_webhook(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The listener is faked at the transport so the suite never opens a socket.
+
+    Delivery is off-thread, so the fake signals an event rather than the test
+    sleeping for a duration it would have to guess at."""
+    monkeypatch.setenv("MDREVIEW_WEBHOOK_URL", "http://listener.invalid/decisions")
+    posted: list[tuple[str, Any]] = []
+    delivered = threading.Event()
+
+    def capture(url: str, **kwargs: Any) -> httpx.Response:
+        posted.append((url, kwargs["json"]))
+        delivered.set()
+        return httpx.Response(200)
+
+    monkeypatch.setattr(notify.httpx, "post", capture)
+    configured = Settings.load(
+        host=settings.host, port=settings.port, database=settings.database
+    )
+
+    with TestClient(create_app(configured)) as client:
+        client.post("/api/documents", json={"content": PLAN, "source_name": "plan"})
+        client.post("/api/documents/plan/versions/1/decision", json={"status": "approved"})
+
+    assert delivered.wait(timeout=5)
+    assert len(posted) == 1
+    url, payload = posted[0]
+    assert url == "http://listener.invalid/decisions"
+    assert payload["slug"] == "plan"
+    assert payload["version"] == 1
+    assert payload["status"] == "approved"
 
 
 def test_api_pending_filter_excludes_decided(api: TestClient) -> None:

@@ -182,6 +182,7 @@ vendored and loaded only on pages that actually contain a diagram.
 | `MDREVIEW_DATA_DIR` | `~/.local/share/mdreview` | Database and logs |
 | `MDREVIEW_AUTOSTART` | `1` | Set `0` to fail instead of starting a server |
 | `MDREVIEW_ALLOW_LAN` | `0` | Set `1` to permit a private-LAN bind |
+| `MDREVIEW_WEBHOOK_URL` | unset | POST every decision here as it is recorded |
 
 The server refuses to bind outside loopback by default: it has no authentication,
 so listening on a routable interface would expose every document to the network.
@@ -255,6 +256,33 @@ they can read the database. Stop the server when you are done.
 On macOS, the application firewall may prompt before allowing the Python
 interpreter to accept incoming connections. Approve that prompt for direct LAN
 mode; do not disable the firewall globally.
+
+### Decision webhook
+
+`mdreview await` tells the agent that submitted a document how its own review
+went. To let something else react to *every* decision — a chat notifier, a CI
+job that starts on approval, a dashboard — point `MDREVIEW_WEBHOOK_URL` at an
+endpoint and each recorded decision is POSTed to it as JSON:
+
+```json
+{
+  "slug": "plan",
+  "version": 2,
+  "status": "approved",
+  "note": "ship it",
+  "decided_at": "2026-08-15T09:12:44+00:00"
+}
+```
+
+Both the review page and the API fire it, and a version can only be decided
+once, so each version produces at most one call.
+
+Delivery is fire-and-forget: it happens on a background thread and every
+failure is ignored, because a listener being down must never fail a decision
+you have already made. There are no retries — a missed event is missed, and
+`GET /api/documents/{slug}/state` remains the authoritative answer for a
+consumer that wants to reconcile on startup. Unset — the default — sends
+nothing.
 
 ## Development
 

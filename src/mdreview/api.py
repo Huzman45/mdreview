@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, Field
 
-from . import db, store
+from . import db, notify, store
 from .config import Settings
 from .models import CommentState, ReviewStatus
 from .store import NotFound, StoreError
@@ -287,7 +287,9 @@ class StateResponse(BaseModel):
 
 
 @router.post("/documents/{slug}/versions/{n}/decision", response_model=VersionSummary)
-def decide(slug: str, n: int, payload: DecisionRequest, conn: Conn) -> VersionSummary:
+def decide(
+    slug: str, n: int, payload: DecisionRequest, conn: Conn, settings: Config
+) -> VersionSummary:
     version = _version(conn, slug, n)
     try:
         updated = store.decide(conn, version=version, status=payload.status, note=payload.note)
@@ -295,6 +297,15 @@ def decide(slug: str, n: int, payload: DecisionRequest, conn: Conn) -> VersionSu
         raise HTTPException(status.HTTP_409_CONFLICT, str(exc)) from exc
     except StoreError as exc:
         raise HTTPException(422, str(exc)) from exc
+
+    notify.fire_decision(
+        settings.webhook_url,
+        slug=slug,
+        version=updated.n,
+        status=updated.status.value,
+        note=updated.decision_note,
+        decided_at=updated.decided_at,
+    )
 
     return VersionSummary(
         n=updated.n,

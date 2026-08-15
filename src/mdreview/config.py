@@ -19,6 +19,7 @@ ENV_PORT = "MDREVIEW_PORT"
 ENV_DATA_DIR = "MDREVIEW_DATA_DIR"
 ENV_AUTOSTART = "MDREVIEW_AUTOSTART"
 ENV_ALLOW_LAN = "MDREVIEW_ALLOW_LAN"
+ENV_WEBHOOK_URL = "MDREVIEW_WEBHOOK_URL"
 
 
 def data_dir() -> Path:
@@ -83,6 +84,16 @@ def allow_lan_enabled() -> bool:
     }
 
 
+def default_webhook_url() -> str | None:
+    """Where a recorded decision is announced, if anywhere.
+
+    Unset is the ordinary case and means nothing is sent: the review loop is
+    complete without a listener, and this only spares one that exists from
+    polling for an event the server already knows about.
+    """
+    return os.environ.get(ENV_WEBHOOK_URL, "").strip() or None
+
+
 def is_loopback(host: str) -> bool:
     """True if ``host`` can only be reached from this machine.
 
@@ -134,6 +145,7 @@ class Settings:
     port: int
     database: Path
     allow_lan: bool = False
+    webhook_url: str | None = None
 
     @classmethod
     def load(
@@ -143,6 +155,7 @@ class Settings:
         port: int | None = None,
         database: Path | None = None,
         allow_lan: bool = False,
+        webhook_url: str | None = None,
     ) -> Settings:
         allow_lan = allow_lan or allow_lan_enabled()
         return cls(
@@ -152,6 +165,7 @@ class Settings:
             port=port if port is not None else default_port(),
             database=database if database is not None else db_path(),
             allow_lan=allow_lan,
+            webhook_url=webhook_url if webhook_url is not None else default_webhook_url(),
         )
 
     @property

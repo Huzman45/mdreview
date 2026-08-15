@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import diff, render, store
+from . import diff, notify, render, store
 from .api import get_conn, get_settings
 from .config import Settings
 from .models import ReviewStatus
@@ -359,6 +359,7 @@ def record_decision(
     n: int,
     request: Request,
     conn: Conn,
+    settings: Config,
     status_value: Annotated[str, Form(alias="status")] = "",
     note: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
@@ -378,6 +379,14 @@ def record_decision(
         return _sidebar(request, conn, document, version, decision_error=str(exc))
 
     refreshed = store.require_version(conn, document.id, n)
+    notify.fire_decision(
+        settings.webhook_url,
+        slug=document.slug,
+        version=refreshed.n,
+        status=refreshed.status.value,
+        note=refreshed.decision_note,
+        decided_at=refreshed.decided_at,
+    )
     return _sidebar(request, conn, document, refreshed)
 
 
