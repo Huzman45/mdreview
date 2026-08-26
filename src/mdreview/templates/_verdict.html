@@ -7,7 +7,7 @@
 <div class="verdict-slot" id="verdict"{% if oob %} hx-swap-oob="true"{% endif %}>
   {% if version.status.value == "pending" and is_latest %}
     <form class="verdict"
-          hx-post="/d/{{ slug }}/v/{{ version.n }}/decision"
+          hx-post="{{ prefix }}/d/{{ slug }}/v/{{ version.n }}/decision"
           hx-target="#sidebar" hx-swap="outerHTML">
       <input class="verdict-note" name="note" placeholder="Add a note, or just decide…">
       <button type="submit" name="status" value="approved" class="verdict-yes">Approve</button>

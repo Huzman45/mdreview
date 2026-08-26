@@ -184,6 +184,7 @@ vendored and loaded only on pages that actually contain a diagram.
 | `MDREVIEW_ALLOW_LAN` | `0` | Set `1` to permit a private-LAN bind |
 | `MDREVIEW_WEBHOOK_URL` | unset | POST every decision here as it is recorded |
 | `MDREVIEW_WEBHOOK_TOKEN` | unset | Bearer token presented to that endpoint |
+| `MDREVIEW_ROOT_PATH` | unset | Path prefix when served behind a proxy |
 
 The server refuses to bind outside loopback by default: it has no authentication,
 so listening on a routable interface would expose every document to the network.
@@ -300,6 +301,56 @@ you have already made. There are no retries — a missed event is missed, and
 `GET /api/documents/{slug}/state` remains the authoritative answer for a
 consumer that wants to reconcile on startup. Unset — the default — sends
 nothing.
+
+### Serving under a path prefix
+
+By default mdreview assumes it owns a site root, which forces anything
+reverse-proxying it onto a dedicated host, port or subdomain. Set
+`MDREVIEW_ROOT_PATH` and it will instead sit under a prefix, so it can share an
+origin with whatever else you already run:
+
+```bash
+MDREVIEW_ROOT_PATH=/mdreview mdreview serve
+```
+
+The prefix is a presentation concern only. A proxy strips it before the request
+arrives, so the server still routes on bare paths — `/d/plan`, not
+`/mdreview/d/plan` — and only the links, form targets and asset URLs it emits
+carry the prefix back to the browser. Configure the proxy to strip it:
+
+```nginx
+location /mdreview/ {
+    proxy_pass http://127.0.0.1:7391/;   # the trailing slash strips the prefix
+}
+```
+
+```caddyfile
+handle_path /mdreview/* {
+    reverse_proxy 127.0.0.1:7391        # handle_path strips; handle does not
+}
+```
+
+The prefix is deliberately kept out of routing, so the server answers on the
+same bare paths whether or not one is set — `/static/app.css`, which is what
+the proxy forwards, stays exactly where it is. It is therefore not FastAPI's
+`root_path`, which declares the opposite: that the prefix is still *on* the
+incoming path. If the app is instead mounted inside a larger ASGI application,
+the prefix does arrive on the path, and that is picked up from the scope with no
+configuration needed.
+
+Leading and trailing slashes are optional; `mdreview`, `/mdreview` and
+`/mdreview/` are equivalent. Unset — the default — serves at the root exactly as
+before.
+
+Setting it declares how the browser reaches this instance, so reach it that way.
+The CLI keeps talking to the server directly and is unaffected, but the URLs it
+prints still name the bind address: opening one of those bypasses the proxy, and
+the page's assets — which are emitted under the prefix — will not resolve there.
+
+This pairs with the loopback default rather than working against it. Because
+mdreview has no authentication of its own, the natural place for it is behind a
+proxy that already authenticates; until now that proxy had to hand it a whole
+origin, and it can now live behind the same gate as everything else.
 
 ## Development
 
