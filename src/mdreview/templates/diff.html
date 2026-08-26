@@ -23,8 +23,8 @@
       <span class="diffstat"><span class="added">+{{ diff.added }}</span> <span class="removed">−{{ diff.removed }}</span></span>
     {% endif %}
     <span class="colophon-links">
-      <a href="/d/{{ document.slug }}/v/{{ version.n }}">rendered</a>
-      <a href="/d/{{ document.slug }}/v/{{ version.n }}/raw">source</a>
+      <a href="{{ prefix }}/d/{{ document.slug }}/v/{{ version.n }}">rendered</a>
+      <a href="{{ prefix }}/d/{{ document.slug }}/v/{{ version.n }}/raw">source</a>
       <span class="current">changes</span>
     </span>
   </div>

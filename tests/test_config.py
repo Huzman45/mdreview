@@ -74,3 +74,25 @@ def test_port_override_must_be_numeric(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_base_url_uses_host_and_port(tmp_path: Path) -> None:
     settings = Settings(host="127.0.0.1", port=9999, database=tmp_path / "db.sqlite")
     assert settings.base_url == "http://127.0.0.1:9999"
+
+
+@pytest.mark.parametrize(
+    ("configured", "expected"),
+    [
+        ("", ""),
+        ("/mdreview", "/mdreview"),
+        ("mdreview", "/mdreview"),
+        ("/mdreview/", "/mdreview"),
+    ],
+)
+def test_root_path_is_normalised(
+    monkeypatch: pytest.MonkeyPatch, configured: str, expected: str
+) -> None:
+    """The prefix is joined to absolute paths, so its slashes must be exact.
+
+    Accepting the forms a proxy config is likely to be written in keeps a stray
+    trailing slash from emitting `//static/app.css`, which a browser reads as a
+    protocol-relative host rather than a path.
+    """
+    monkeypatch.setenv("MDREVIEW_ROOT_PATH", configured)
+    assert config.default_root_path() == expected

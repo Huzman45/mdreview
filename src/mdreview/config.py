@@ -21,6 +21,7 @@ ENV_AUTOSTART = "MDREVIEW_AUTOSTART"
 ENV_ALLOW_LAN = "MDREVIEW_ALLOW_LAN"
 ENV_WEBHOOK_URL = "MDREVIEW_WEBHOOK_URL"
 ENV_WEBHOOK_TOKEN = "MDREVIEW_WEBHOOK_TOKEN"
+ENV_ROOT_PATH = "MDREVIEW_ROOT_PATH"
 
 
 def data_dir() -> Path:
@@ -95,6 +96,16 @@ def default_webhook_token() -> str | None:
     return os.environ.get(ENV_WEBHOOK_TOKEN, "").strip() or None
 
 
+def default_root_path() -> str:
+    """The path prefix mdreview is mounted under, when it is not at a root.
+
+    Normalised to empty, or one leading slash with no trailing one, so that
+    joining it to an absolute path always produces exactly one slash.
+    """
+    mount = os.environ.get(ENV_ROOT_PATH, "").strip().strip("/")
+    return f"/{mount}" if mount else ""
+
+
 def is_loopback(host: str) -> bool:
     """True if ``host`` can only be reached from this machine.
 
@@ -148,6 +159,7 @@ class Settings:
     allow_lan: bool = False
     webhook_url: str | None = None
     webhook_token: str | None = None
+    root_path: str = ""
 
     @classmethod
     def load(
@@ -159,6 +171,7 @@ class Settings:
         allow_lan: bool = False,
         webhook_url: str | None = None,
         webhook_token: str | None = None,
+        root_path: str | None = None,
     ) -> Settings:
         allow_lan = allow_lan or allow_lan_enabled()
         return cls(
@@ -172,6 +185,7 @@ class Settings:
             webhook_token=(
                 webhook_token if webhook_token is not None else default_webhook_token()
             ),
+            root_path=root_path if root_path is not None else default_root_path(),
         )
 
     @property

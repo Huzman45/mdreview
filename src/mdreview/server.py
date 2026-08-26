@@ -30,6 +30,7 @@ def create_app(settings: Settings) -> FastAPI:
         lifespan=lifespan,
         docs_url=None,
         redoc_url=None,
+        root_path=settings.root_path,
     )
     app.state.settings = settings
 

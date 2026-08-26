@@ -1,5 +1,7 @@
 {% extends "base.html" %}
-{% from "_docrow.html" import docrow %}
+{# "with context" so the macro can read the mount prefix: an imported macro is
+   otherwise sealed off from the template context and would emit bare paths. #}
+{% from "_docrow.html" import docrow with context %}
 {% block title %}Archived — mdreview{% endblock %}
 
 {% block masthead %}
@@ -12,7 +14,7 @@
 {% if not summaries %}
   <div class="empty">
     <p class="empty-title">Nothing archived</p>
-    <p><a href="/">Back to the index</a></p>
+    <p><a href="{{ prefix }}/">Back to the index</a></p>
   </div>
 {% else %}
 <div class="index">
@@ -25,7 +27,7 @@
       {% for item in summaries %}{{ docrow(item, false, action="restore") }}{% endfor %}
     </div>
   </section>
-  <p class="index-foot"><a href="/">Back to the index</a></p>
+  <p class="index-foot"><a href="{{ prefix }}/">Back to the index</a></p>
 </div>
 {% endif %}
 </article>

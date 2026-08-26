@@ -21,7 +21,23 @@ from .store import NotFound, StoreError
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
 
-templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
+
+def mount_prefix(request: Request) -> str:
+    """The path this instance is served under, as seen by the browser.
+
+    A reverse proxy strips the prefix before the request arrives, so the paths
+    the server routes on are always bare and only the markup it emits can carry
+    the prefix back. Read from the ASGI scope rather than from settings so that
+    a proxy or `uvicorn --root-path` supplying it directly works too.
+    """
+    return request.scope.get("root_path", "").rstrip("/")
+
+
+def _prefix(request: Request) -> dict[str, str]:
+    return {"prefix": mount_prefix(request)}
+
+
+templates = Jinja2Templates(directory=str(TEMPLATE_DIR), context_processors=[_prefix])
 
 
 def display_path(value: str | None) -> str:
@@ -188,18 +204,20 @@ def archived_index(request: Request, conn: Conn) -> HTMLResponse:
 
 
 @router.post("/d/{slug}/archive")
-def archive_document(slug: str, conn: Conn) -> RedirectResponse:
+def archive_document(slug: str, request: Request, conn: Conn) -> RedirectResponse:
     _require_document(conn, slug)
     store.archive_document(conn, slug)
     # 303 turns the POST into a GET of the list the reviewer was looking at.
-    return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(f"{mount_prefix(request)}/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/d/{slug}/unarchive")
-def unarchive_document(slug: str, conn: Conn) -> RedirectResponse:
+def unarchive_document(slug: str, request: Request, conn: Conn) -> RedirectResponse:
     _require_document(conn, slug)
     store.unarchive_document(conn, slug)
-    return RedirectResponse("/archived", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(
+        f"{mount_prefix(request)}/archived", status_code=status.HTTP_303_SEE_OTHER
+    )
 
 
 @router.get("/d/{slug}", response_class=HTMLResponse)
