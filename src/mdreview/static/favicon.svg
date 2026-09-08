@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="mdreview">
+  <title>mdreview</title>
+  <style>
+    /* Dark values are an override, not the base: literal presentation
+       attributes below stay authoritative for renderers that ignore CSS, so
+       those degrade to the light icon rather than to an unpainted shape.
+       The OS scheme is the only signal a tab icon gets — it cannot see
+       mdreview's in-app theme toggle. */
+    @media (prefers-color-scheme: dark) {
+      .paper { fill: #1e1b15; }
+      .edge { stroke: #332e24; }
+      .mark { fill: #d9a163; }
+    }
+  </style>
+  <rect class="paper" width="32" height="32" rx="6.5" fill="#f4f0e7"/>
+  <rect class="edge" x="0.5" y="0.5" width="31" height="31" rx="6" fill="none" stroke="#ddd4c1"/>
+  <g class="mark" fill="#8a5a2b">
+    <path d="M12.6 8.5c-3.7 1.6-6 4.6-6 8.2 0 3.2 1.9 5.4 4.6 5.4 2.4 0 4.1-1.7 4.1-4 0-2.2-1.5-3.8-3.6-3.8-.4 0-.8 0-1.1.2.5-1.9 1.9-3.4 3.9-4.4Z"/>
+    <path d="M24.2 8.5c-3.7 1.6-6 4.6-6 8.2 0 3.2 1.9 5.4 4.6 5.4 2.4 0 4.1-1.7 4.1-4 0-2.2-1.5-3.8-3.6-3.8-.4 0-.8 0-1.1.2.5-1.9 1.9-3.4 3.9-4.4Z"/>
+  </g>
+</svg>

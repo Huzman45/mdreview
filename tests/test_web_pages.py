@@ -198,6 +198,13 @@ def test_static_assets_are_served(api: TestClient) -> None:
     assert api.get("/static/htmx.min.js").status_code == 200
 
 
+def test_the_favicon_is_linked_and_served(api: TestClient) -> None:
+    submit(api)
+    assert api.get("/static/favicon.svg").status_code == 200
+    page = api.get("/d/plan").text
+    assert '<link rel="icon" type="image/svg+xml" href="/static/favicon.svg">' in page
+
+
 def test_markup_in_a_document_is_not_executed(api: TestClient) -> None:
     submit(api, content="# Title\n\n<script>alert(1)</script>\n")
     text = api.get("/d/plan").text
