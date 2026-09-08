@@ -182,6 +182,9 @@ vendored and loaded only on pages that actually contain a diagram.
 | `MDREVIEW_DATA_DIR` | `~/.local/share/mdreview` | Database and logs |
 | `MDREVIEW_AUTOSTART` | `1` | Set `0` to fail instead of starting a server |
 | `MDREVIEW_ALLOW_LAN` | `0` | Set `1` to permit a private-LAN bind |
+| `MDREVIEW_WEBHOOK_URL` | unset | POST every decision here as it is recorded |
+| `MDREVIEW_WEBHOOK_TOKEN` | unset | Bearer token presented to that endpoint |
+| `MDREVIEW_ROOT_PATH` | unset | Path prefix when served behind a proxy |
 
 The server refuses to bind outside loopback by default: it has no authentication,
 so listening on a routable interface would expose every document to the network.
@@ -231,7 +234,7 @@ Bookmark your machine's Bonjour name on the tablet rather than an IP —
 `http://<your-hostname>.local:7391/?t=<token>` — because the name survives DHCP
 changes and a literal address does not.
 
-Two things worth knowing:
+Three things worth knowing:
 
 - Once installed, the server is running whenever you are logged in. Rotating the
   token is how you revoke a device, not stopping the server.
@@ -239,6 +242,11 @@ Two things worth knowing:
   the loopback server, which needs no token. From another device it resolves to the
   private address and the token is required. Do not read a token-less `200` on your
   own machine as the guard being off.
+- The service does not read your shell profile, so `MDREVIEW_*` variables set in
+  `~/.zshrc` do not reach it. This is most visible with the decision webhook: the
+  loopback server the agent starts inherits your environment and fires it, while
+  the installed service does not — so the same decision announces from your
+  laptop and stays silent from the tablet, with no error either way.
 
 A server binds one address, so a LAN-bound server is not listening on loopback.
 The agent will simply start its own loopback server on demand, and the two share
@@ -255,6 +263,94 @@ they can read the database. Stop the server when you are done.
 On macOS, the application firewall may prompt before allowing the Python
 interpreter to accept incoming connections. Approve that prompt for direct LAN
 mode; do not disable the firewall globally.
+
+### Decision webhook
+
+`mdreview await` tells the agent that submitted a document how its own review
+went. To let something else react to *every* decision — a chat notifier, a CI
+job that starts on approval, a dashboard — point `MDREVIEW_WEBHOOK_URL` at an
+endpoint and each recorded decision is POSTed to it as JSON:
+
+```json
+{
+  "slug": "plan",
+  "version": 2,
+  "status": "approved",
+  "note": "ship it",
+  "decided_at": "2026-08-15T09:12:44+00:00"
+}
+```
+
+Both the review page and the API fire it, and a version can only be decided
+once, so each version produces at most one call.
+
+If the receiver authenticates its callers, set `MDREVIEW_WEBHOOK_TOKEN` and the
+POST carries it as a bearer credential:
+
+```
+Authorization: Bearer <token>
+```
+
+Leave it unset and no `Authorization` header is sent. Note that the token is
+only as protected as the URL it is sent to: over `http://` on an untrusted
+network it travels in the clear, like everything else this tool sends.
+
+Delivery is fire-and-forget: it happens on a background thread and every
+failure is ignored, because a listener being down must never fail a decision
+you have already made. There are no retries — a missed event is missed, and
+`GET /api/documents/{slug}/state` remains the authoritative answer for a
+consumer that wants to reconcile on startup. Unset — the default — sends
+nothing.
+
+### Serving under a path prefix
+
+By default mdreview assumes it owns a site root, which forces anything
+reverse-proxying it onto a dedicated host, port or subdomain. Set
+`MDREVIEW_ROOT_PATH` and it will instead sit under a prefix, so it can share an
+origin with whatever else you already run:
+
+```bash
+MDREVIEW_ROOT_PATH=/mdreview mdreview serve
+```
+
+The prefix is a presentation concern only. A proxy strips it before the request
+arrives, so the server still routes on bare paths — `/d/plan`, not
+`/mdreview/d/plan` — and only the links, form targets and asset URLs it emits
+carry the prefix back to the browser. Configure the proxy to strip it:
+
+```nginx
+location /mdreview/ {
+    proxy_pass http://127.0.0.1:7391/;   # the trailing slash strips the prefix
+}
+```
+
+```caddyfile
+handle_path /mdreview/* {
+    reverse_proxy 127.0.0.1:7391        # handle_path strips; handle does not
+}
+```
+
+The prefix is deliberately kept out of routing, so the server answers on the
+same bare paths whether or not one is set — `/static/app.css`, which is what
+the proxy forwards, stays exactly where it is. It is therefore not FastAPI's
+`root_path`, which declares the opposite: that the prefix is still *on* the
+incoming path. If the app is instead mounted inside a larger ASGI application,
+the prefix does arrive on the path, and that is picked up from the scope with no
+configuration needed.
+
+Leading and trailing slashes are optional; `mdreview`, `/mdreview` and
+`/mdreview/` are equivalent. Unset — the default — serves at the root exactly as
+before.
+
+Setting it declares how the browser reaches this instance, so reach it that way.
+The CLI keeps talking to the server directly and is unaffected, but the URLs it
+prints still name the bind address: opening one of those bypasses the proxy, and
+the page's assets — which are emitted under the prefix — will not resolve there.
+
+This pairs with the loopback default rather than working against it. Because
+mdreview has no authentication of its own, the natural place for it is behind a
+proxy that already authenticates; until now that proxy had to hand it a whole
+origin, and it can now live behind the same gate as everything else.
 
 ## Development
 

@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import sqlite3
+import threading
 from collections.abc import Iterator
+from typing import Any
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from mdreview import store
+from mdreview import notify, store
 from mdreview.config import Settings
 from mdreview.models import ReviewStatus
 from mdreview.server import create_app
@@ -252,6 +255,118 @@ def test_index_distinguishes_pending_from_decided(api: TestClient) -> None:
     assert "/d/beta" in waiting
     assert "/d/alpha" in decided
     assert "/d/alpha" not in waiting
+
+
+@pytest.mark.parametrize("token", [None, "s3cr3t"])
+def test_a_decision_is_announced_to_the_configured_webhook(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, token: str | None
+) -> None:
+    """The sender's `httpx.post` is replaced, so the suite never opens a socket.
+
+    Delivery is off-thread, so the fake signals an event rather than the test
+    sleeping for a duration it would have to guess at. The token is pinned both
+    ways round: the suite runs inside an agent session whose environment it
+    would otherwise inherit."""
+    monkeypatch.setenv("MDREVIEW_WEBHOOK_URL", "http://listener.invalid/decisions")
+    if token is None:
+        monkeypatch.delenv("MDREVIEW_WEBHOOK_TOKEN", raising=False)
+    else:
+        monkeypatch.setenv("MDREVIEW_WEBHOOK_TOKEN", token)
+    posted: list[tuple[str, Any]] = []
+    delivered = threading.Event()
+
+    def capture(url: str, **kwargs: Any) -> httpx.Response:
+        posted.append((url, kwargs))
+        delivered.set()
+        return httpx.Response(200)
+
+    monkeypatch.setattr(notify.httpx, "post", capture)
+    configured = Settings.load(
+        host=settings.host, port=settings.port, database=settings.database
+    )
+
+    with TestClient(create_app(configured)) as client:
+        client.post("/api/documents", json={"content": PLAN, "source_name": "plan"})
+        client.post("/api/documents/plan/versions/1/decision", json={"status": "approved"})
+
+    assert delivered.wait(timeout=5)
+    assert len(posted) == 1
+    url, sent = posted[0]
+    assert url == "http://listener.invalid/decisions"
+    assert sent["json"]["slug"] == "plan"
+    assert sent["json"]["version"] == 1
+    assert sent["json"]["status"] == "approved"
+
+    headers = sent["headers"] or {}
+    if token is None:
+        assert "Authorization" not in headers
+    else:
+        assert headers["Authorization"] == "Bearer s3cr3t"
+
+
+def test_the_page_announces_every_field_of_the_decision(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The page builds the payload separately from the API, so it is checked
+    separately: one mapping being right says nothing about the other."""
+    monkeypatch.setenv("MDREVIEW_WEBHOOK_URL", "http://listener.invalid/decisions")
+    monkeypatch.delenv("MDREVIEW_WEBHOOK_TOKEN", raising=False)
+    posted: list[Any] = []
+    delivered = threading.Event()
+
+    def capture(url: str, **kwargs: Any) -> httpx.Response:
+        posted.append(kwargs["json"])
+        delivered.set()
+        return httpx.Response(200)
+
+    monkeypatch.setattr(notify.httpx, "post", capture)
+    configured = Settings.load(
+        host=settings.host, port=settings.port, database=settings.database
+    )
+
+    with TestClient(create_app(configured)) as client:
+        client.post("/api/documents", json={"content": PLAN, "source_name": "plan"})
+        client.post(
+            "/d/plan/v/1/decision",
+            data={"status": "changes_requested", "note": "tighten section 2"},
+        )
+
+    assert delivered.wait(timeout=5)
+    assert len(posted) == 1
+    payload = posted[0]
+    assert payload["slug"] == "plan"
+    assert payload["version"] == 1
+    assert payload["status"] == "changes_requested"
+    assert payload["note"] == "tighten section 2"
+    assert payload["decided_at"] is not None
+
+
+def test_a_failing_listener_does_not_fail_the_decision(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The reason delivery is fire-and-forget: by the time anyone is told, the
+    decision is recorded, and no listener gets to take it back."""
+    monkeypatch.setenv("MDREVIEW_WEBHOOK_URL", "http://listener.invalid/decisions")
+    attempted = threading.Event()
+
+    def explode(url: str, **kwargs: Any) -> httpx.Response:
+        attempted.set()
+        raise httpx.ConnectError("connection refused")
+
+    monkeypatch.setattr(notify.httpx, "post", explode)
+    configured = Settings.load(
+        host=settings.host, port=settings.port, database=settings.database
+    )
+
+    with TestClient(create_app(configured)) as client:
+        client.post("/api/documents", json={"content": PLAN, "source_name": "plan"})
+        response = client.post(
+            "/api/documents/plan/versions/1/decision", json={"status": "approved"}
+        )
+        assert response.status_code == 200
+        assert client.get("/api/documents/plan/state").json()["status"] == "approved"
+
+    assert attempted.wait(timeout=5)
 
 
 def test_api_pending_filter_excludes_decided(api: TestClient) -> None:

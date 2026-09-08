@@ -19,6 +19,9 @@ ENV_PORT = "MDREVIEW_PORT"
 ENV_DATA_DIR = "MDREVIEW_DATA_DIR"
 ENV_AUTOSTART = "MDREVIEW_AUTOSTART"
 ENV_ALLOW_LAN = "MDREVIEW_ALLOW_LAN"
+ENV_WEBHOOK_URL = "MDREVIEW_WEBHOOK_URL"
+ENV_WEBHOOK_TOKEN = "MDREVIEW_WEBHOOK_TOKEN"
+ENV_ROOT_PATH = "MDREVIEW_ROOT_PATH"
 
 
 def data_dir() -> Path:
@@ -83,6 +86,26 @@ def allow_lan_enabled() -> bool:
     }
 
 
+def default_webhook_url() -> str | None:
+    """Where a recorded decision is announced, if anywhere."""
+    return os.environ.get(ENV_WEBHOOK_URL, "").strip() or None
+
+
+def default_webhook_token() -> str | None:
+    """The bearer token presented to that endpoint, if it wants one."""
+    return os.environ.get(ENV_WEBHOOK_TOKEN, "").strip() or None
+
+
+def default_root_path() -> str:
+    """The path prefix mdreview is mounted under, when it is not at a root.
+
+    Normalised to empty, or one leading slash with no trailing one, so that
+    joining it to an absolute path always produces exactly one slash.
+    """
+    mount = os.environ.get(ENV_ROOT_PATH, "").strip().strip("/")
+    return f"/{mount}" if mount else ""
+
+
 def is_loopback(host: str) -> bool:
     """True if ``host`` can only be reached from this machine.
 
@@ -134,6 +157,9 @@ class Settings:
     port: int
     database: Path
     allow_lan: bool = False
+    webhook_url: str | None = None
+    webhook_token: str | None = None
+    root_path: str = ""
 
     @classmethod
     def load(
@@ -143,6 +169,9 @@ class Settings:
         port: int | None = None,
         database: Path | None = None,
         allow_lan: bool = False,
+        webhook_url: str | None = None,
+        webhook_token: str | None = None,
+        root_path: str | None = None,
     ) -> Settings:
         allow_lan = allow_lan or allow_lan_enabled()
         return cls(
@@ -152,6 +181,11 @@ class Settings:
             port=port if port is not None else default_port(),
             database=database if database is not None else db_path(),
             allow_lan=allow_lan,
+            webhook_url=webhook_url if webhook_url is not None else default_webhook_url(),
+            webhook_token=(
+                webhook_token if webhook_token is not None else default_webhook_token()
+            ),
+            root_path=root_path if root_path is not None else default_root_path(),
         )
 
     @property

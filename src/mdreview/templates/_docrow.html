@@ -7,7 +7,7 @@
    age. #}
 {% macro docrow(item, waiting, action=none) %}
   <div class="docrow {% if not waiting %}docrow-done{% endif %}">
-    <a class="docrow-link" href="/d/{{ item.document.slug }}">
+    <a class="docrow-link" href="{{ prefix }}/d/{{ item.document.slug }}">
       <span class="docrow-main">
         <span class="docrow-title">
           <strong>{{ item.document.title }}</strong>
@@ -34,11 +34,11 @@
     </a>
 
     {% if action == "archive" %}
-    <form class="docrow-action" method="post" action="/d/{{ item.document.slug }}/archive">
+    <form class="docrow-action" method="post" action="{{ prefix }}/d/{{ item.document.slug }}/archive">
       <button type="submit" title="Put away — leaves the index, stays readable">Archive</button>
     </form>
     {% elif action == "restore" %}
-    <form class="docrow-action" method="post" action="/d/{{ item.document.slug }}/unarchive">
+    <form class="docrow-action" method="post" action="{{ prefix }}/d/{{ item.document.slug }}/unarchive">
       <button type="submit" title="Return to the index">Restore</button>
     </form>
     {% endif %}

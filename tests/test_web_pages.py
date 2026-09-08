@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import sqlite3
 from collections.abc import Iterator
 from datetime import UTC, date, datetime, timedelta
@@ -308,3 +309,96 @@ def test_task_items_are_not_flex_containers(api: TestClient) -> None:
     block = block[: block.index("}")]
     assert "display: block" in block
     assert "flex" not in block
+
+
+# -- path prefix -----------------------------------------------------------
+
+# htmx verbs as well as the plain HTML attributes: an hx-* target is a URL the
+# browser will fetch, and missing one leaves a page that renders correctly but
+# silently cannot write.
+ROOT_ANCHORED = re.compile(r'(?:href|src|action|hx-(?:get|post|put|patch|delete))="(/[^"]*)"')
+
+# The subset a browser fetches with a GET, which is what can be followed here.
+FETCHABLE = re.compile(r'(?:href|src)="(/[^"#?]*)"')
+
+
+@pytest.mark.parametrize("prefix", ["", "/mdreview"])
+def test_pages_anchor_their_urls_at_the_configured_prefix(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, prefix: str
+) -> None:
+    """Every link, asset and htmx target is emitted relative to the prefix.
+
+    A proxy strips the prefix before the request arrives, so the server only
+    ever sees the bare path; nothing but the emitted markup can carry the
+    prefix back to the browser. Swept rather than spot-checked because a single
+    missed reference is a broken page, and new markup is added over time."""
+    monkeypatch.setenv("MDREVIEW_ROOT_PATH", prefix)
+    configured = Settings.load(
+        host=settings.host, port=settings.port, database=settings.database
+    )
+
+    with TestClient(create_app(configured)) as client:
+        client.post("/api/documents", json={"content": PLAN, "source_name": "plan"})
+        client.post("/api/documents", json={"content": PLAN, "source_name": "shelved"})
+        client.post("/d/shelved/archive")
+        paths = ("/", "/archived", "/d/plan", "/d/plan/v/1/raw")
+        pages = {p: client.get(p).text for p in paths}
+
+    for path, markup in pages.items():
+        for ref in ROOT_ANCHORED.findall(markup):
+            assert ref.startswith(f"{prefix}/"), f"{path} escapes the prefix: {ref}"
+            # A doubled slash reads as a protocol-relative host, not a path.
+            assert not ref.startswith("//"), f"{path} emits a host-relative ref: {ref}"
+
+    # Pin the distinct mechanisms, so a regression names itself.
+    assert f'href="{prefix}/static/app.css"' in pages["/d/plan"]
+    assert f'hx-post="{prefix}/d/plan/v/1/decision"' in pages["/d/plan"]
+    assert f'href="{prefix}/archived"' in pages["/"]
+    # Rendered by an imported macro, which only sees the prefix "with context".
+    assert f'href="{prefix}/d/plan"' in pages["/"]
+
+
+@pytest.mark.parametrize("prefix", ["", "/mdreview"])
+def test_emitted_urls_resolve_once_the_proxy_strips_the_prefix(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, prefix: str
+) -> None:
+    """What a page asks for must be what the server can answer.
+
+    The proxy strips the prefix, so an emitted `/mdreview/static/app.css`
+    arrives as `/static/app.css` and has to resolve there. Checking the markup
+    alone cannot see this: a prefix that reaches the routing table moves the
+    paths the server answers on, leaving every reference correctly written and
+    none of them fetchable."""
+    monkeypatch.setenv("MDREVIEW_ROOT_PATH", prefix)
+    configured = Settings.load(
+        host=settings.host, port=settings.port, database=settings.database
+    )
+
+    with TestClient(create_app(configured)) as client:
+        client.post("/api/documents", json={"content": PLAN, "source_name": "plan"})
+        for page in ("/", "/d/plan"):
+            for ref in sorted(set(FETCHABLE.findall(client.get(page).text))):
+                delivered = ref[len(prefix) :]
+                got = client.get(delivered).status_code
+                assert got == 200, f"{page} emits {ref}, proxied to {delivered}: {got}"
+
+
+@pytest.mark.parametrize("prefix", ["", "/mdreview"])
+def test_redirects_land_inside_the_prefix(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, prefix: str
+) -> None:
+    """A redirect carries an absolute path in a Location header rather than in
+    rendered markup, so it is prefixed by a different mechanism from the links
+    and would otherwise send the browser outside the mount."""
+    monkeypatch.setenv("MDREVIEW_ROOT_PATH", prefix)
+    configured = Settings.load(
+        host=settings.host, port=settings.port, database=settings.database
+    )
+
+    with TestClient(create_app(configured)) as client:
+        client.post("/api/documents", json={"content": PLAN, "source_name": "plan"})
+        archived = client.post("/d/plan/archive", follow_redirects=False)
+        restored = client.post("/d/plan/unarchive", follow_redirects=False)
+
+    assert archived.headers["location"] == f"{prefix}/"
+    assert restored.headers["location"] == f"{prefix}/archived"

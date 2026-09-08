@@ -1,5 +1,7 @@
 {% extends "base.html" %}
-{% from "_docrow.html" import docrow %}
+{# "with context" so the macro can read the mount prefix: an imported macro is
+   otherwise sealed off from the template context and would emit bare paths. #}
+{% from "_docrow.html" import docrow with context %}
 {% block title %}mdreview{% endblock %}
 
 {% block content %}
@@ -46,7 +48,7 @@
 
   {% if archived_count %}
   <p class="index-foot">
-    <a href="/archived">{{ archived_count }} archived</a>
+    <a href="{{ prefix }}/archived">{{ archived_count }} archived</a>
   </p>
   {% endif %}
 </div>
