@@ -23,7 +23,7 @@
         {% if n == version.n %}
           <span class="current">{{ n }}</span>
         {% else %}
-          <a href="/d/{{ document.slug }}/v/{{ n }}{{ '/raw' if view == 'raw' }}">{{ n }}</a>
+          <a href="{{ prefix }}/d/{{ document.slug }}/v/{{ n }}{{ '/raw' if view == 'raw' }}">{{ n }}</a>
         {% endif %}
       {% endfor %}
     </span>
@@ -33,20 +33,20 @@
     {% if view == "rendered" %}
       <span class="current">rendered</span>
     {% else %}
-      <a href="/d/{{ document.slug }}/v/{{ version.n }}">rendered</a>
+      <a href="{{ prefix }}/d/{{ document.slug }}/v/{{ version.n }}">rendered</a>
     {% endif %}
 
     {% if view == "raw" %}
       <span class="current">source</span>
     {% else %}
-      <a href="/d/{{ document.slug }}/v/{{ version.n }}/raw">source</a>
+      <a href="{{ prefix }}/d/{{ document.slug }}/v/{{ version.n }}/raw">source</a>
     {% endif %}
 
     {% if previous_version %}
       {% if view == "diff" %}
         <span class="current">changes</span>
       {% else %}
-        <a href="/d/{{ document.slug }}/diff/{{ previous_version }}/{{ version.n }}">changes</a>
+        <a href="{{ prefix }}/d/{{ document.slug }}/diff/{{ previous_version }}/{{ version.n }}">changes</a>
       {% endif %}
     {% endif %}
   </span>

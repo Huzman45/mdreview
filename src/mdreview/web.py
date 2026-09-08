@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
-from . import diff, render, store
+from . import diff, notify, render, store
 from .api import get_conn, get_settings
 from .config import Settings
 from .models import ReviewStatus
@@ -21,7 +21,32 @@ from .store import NotFound, StoreError
 TEMPLATE_DIR = Path(__file__).parent / "templates"
 STATIC_DIR = Path(__file__).parent / "static"
 
-templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
+
+def mount_prefix(request: Request) -> str:
+    """The path this instance is served under, as seen by the browser.
+
+    A reverse proxy strips the prefix before the request arrives, so the paths
+    the server routes on are always bare and only the markup it emits can carry
+    the prefix back.
+
+    Deliberately not FastAPI's ``root_path``. That declares the prefix is still
+    *on* the incoming path, which holds when the app is mounted inside another
+    one but not behind a stripping proxy; setting it there also shifts the
+    static mount, so `/static/app.css` — exactly what the proxy forwards — stops
+    resolving. Keeping the configured prefix out of routing leaves every path
+    bare and confines the prefix to the URLs a page emits. The scope is still
+    consulted, so an app mounted under a path, which does carry the prefix
+    through, keeps working without being configured twice.
+    """
+    configured = request.app.state.settings.root_path
+    return (configured or request.scope.get("root_path", "")).rstrip("/")
+
+
+def _prefix(request: Request) -> dict[str, str]:
+    return {"prefix": mount_prefix(request)}
+
+
+templates = Jinja2Templates(directory=str(TEMPLATE_DIR), context_processors=[_prefix])
 
 
 def display_path(value: str | None) -> str:
@@ -188,18 +213,20 @@ def archived_index(request: Request, conn: Conn) -> HTMLResponse:
 
 
 @router.post("/d/{slug}/archive")
-def archive_document(slug: str, conn: Conn) -> RedirectResponse:
+def archive_document(slug: str, request: Request, conn: Conn) -> RedirectResponse:
     _require_document(conn, slug)
     store.archive_document(conn, slug)
     # 303 turns the POST into a GET of the list the reviewer was looking at.
-    return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(f"{mount_prefix(request)}/", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/d/{slug}/unarchive")
-def unarchive_document(slug: str, conn: Conn) -> RedirectResponse:
+def unarchive_document(slug: str, request: Request, conn: Conn) -> RedirectResponse:
     _require_document(conn, slug)
     store.unarchive_document(conn, slug)
-    return RedirectResponse("/archived", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(
+        f"{mount_prefix(request)}/archived", status_code=status.HTTP_303_SEE_OTHER
+    )
 
 
 @router.get("/d/{slug}", response_class=HTMLResponse)
@@ -359,6 +386,7 @@ def record_decision(
     n: int,
     request: Request,
     conn: Conn,
+    settings: Config,
     status_value: Annotated[str, Form(alias="status")] = "",
     note: Annotated[str, Form()] = "",
 ) -> HTMLResponse:
@@ -378,6 +406,15 @@ def record_decision(
         return _sidebar(request, conn, document, version, decision_error=str(exc))
 
     refreshed = store.require_version(conn, document.id, n)
+    notify.fire_decision(
+        settings.webhook_url,
+        slug=document.slug,
+        version=refreshed.n,
+        status=refreshed.status.value,
+        note=refreshed.decision_note,
+        decided_at=refreshed.decided_at,
+        token=settings.webhook_token,
+    )
     return _sidebar(request, conn, document, refreshed)
 
 

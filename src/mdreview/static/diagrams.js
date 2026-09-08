@@ -9,7 +9,20 @@
 (function () {
   "use strict";
 
-  var LIBRARY = "/static/mermaid.min.js";
+  // Resolved from this script's own URL rather than written as an absolute
+  // path, because mdreview may be served under a prefix behind a proxy and a
+  // static asset is the one place the server cannot substitute it in. The
+  // library is a sibling in the same directory, so whatever prefix this file
+  // was fetched under is exactly the prefix the library needs.
+  //
+  // Read at top level deliberately. currentScript is set throughout a classic
+  // script's synchronous execution, and `defer` postpones that execution
+  // without changing it; it reads null only inside a module or a later
+  // callback, which is why load() below cannot ask for it itself.
+  var own = document.currentScript;
+  var LIBRARY = own
+    ? own.src.replace(/[^/]*$/, "mermaid.min.js")
+    : "/static/mermaid.min.js";
   var loading = null;
 
   function blocks() {
