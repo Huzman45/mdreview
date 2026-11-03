@@ -258,3 +258,29 @@ def test_a_note_added_through_the_form_lands_anchored(browser, live: str) -> Non
         assert fresh["y"] == pytest.approx(target["y"], abs=4)
     finally:
         context.close()
+
+
+@pytest.mark.parametrize(
+    "path, target", [("/d/plan", ".mdr-block"), ("/d/plan/v/1/raw", ".mdr-line")]
+)
+def test_selecting_does_not_scroll_to_where_the_form_was(
+    browser, live: str, path, target
+) -> None:
+    """The idle form parks after the last note, below the fold on a short
+    window. Focusing it on selection must not scroll there before it moves
+    beside the passage just clicked."""
+    context = browser.new_context(viewport={"width": 1440, "height": 400})
+    try:
+        page = context.new_page()
+        page.goto(live + path, wait_until="domcontentloaded")
+        page.wait_for_selector(".margin.anchored")
+        assert page.evaluate("window.scrollY") == 0
+
+        attr = "data-line-start" if target == ".mdr-block" else "data-line"
+        page.locator(f'{target}[{attr}="3"]').click()
+        page.wait_for_timeout(300)
+
+        assert page.evaluate("document.activeElement.id") == "comment-body"
+        assert page.evaluate("window.scrollY") == 0, "selecting a line scrolled the page"
+    finally:
+        context.close()
