@@ -178,7 +178,10 @@
       var panel = document.getElementById("comment-panel");
       if (panel) panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
     } else {
-      f.body.focus();
+      // This handler runs before anchors.js moves the form beside the
+      // selection, so a plain focus would scroll the page to where the form
+      // was parked — often far below the passage just clicked.
+      f.body.focus({ preventScroll: true });
     }
   });
 
