@@ -26,8 +26,9 @@ def mount_prefix(request: Request) -> str:
     """The path this instance is served under, as seen by the browser.
 
     A reverse proxy strips the prefix before the request arrives, so the paths
-    the server routes on are always bare and only the markup it emits can carry
-    the prefix back.
+    the server routes on are bare and only the markup it emits can carry the
+    prefix back. (Requests that bypass the proxy keep it, and
+    ``server.AcceptMountPrefix`` strips it for them.)
 
     Deliberately not FastAPI's ``root_path``. That declares the prefix is still
     *on* the incoming path, which holds when the app is mounted inside another

@@ -402,3 +402,46 @@ def test_redirects_land_inside_the_prefix(
 
     assert archived.headers["location"] == f"{prefix}/"
     assert restored.headers["location"] == f"{prefix}/archived"
+
+
+@pytest.mark.parametrize("prefix", ["", "/mdreview"])
+def test_emitted_urls_resolve_when_the_proxy_is_bypassed(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch, prefix: str
+) -> None:
+    """Opening the bind address directly must still give a working page.
+
+    The CLI prints that address, so it is the URL people actually open. Nothing
+    strips the prefix on that route, so a page whose assets resolve only once a
+    proxy has removed it renders with no styling and no JavaScript."""
+    monkeypatch.setenv("MDREVIEW_ROOT_PATH", prefix)
+    configured = Settings.load(
+        host=settings.host, port=settings.port, database=settings.database
+    )
+
+    with TestClient(create_app(configured)) as client:
+        client.post("/api/documents", json={"content": PLAN, "source_name": "plan"})
+        for page in ("/", "/d/plan", f"{prefix}/", f"{prefix}/d/plan"):
+            response = client.get(page)
+            assert response.status_code == 200, f"{page}: {response.status_code}"
+            for ref in sorted(set(FETCHABLE.findall(response.text))):
+                got = client.get(ref).status_code
+                assert got == 200, f"{page} emits {ref}, fetched directly: {got}"
+
+
+def test_a_prefix_naming_a_route_leaves_the_bare_route_alone(
+    settings: Settings, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Bare paths win over prefixed ones, so a prefix that happens to share a
+    route's leading segment cannot swallow the route — here the API the CLI
+    talks to — and both spellings still resolve."""
+    monkeypatch.setenv("MDREVIEW_ROOT_PATH", "/api")
+    configured = Settings.load(
+        host=settings.host, port=settings.port, database=settings.database
+    )
+
+    with TestClient(create_app(configured)) as client:
+        created = client.post("/api/documents", json={"content": PLAN, "source_name": "plan"})
+        assert created.status_code == 201
+        assert client.get("/api/documents").status_code == 200
+        assert client.get("/api/api/documents").status_code == 200
+        assert client.get("/api/static/app.css").status_code == 200

@@ -10,6 +10,8 @@ from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI
+from starlette.routing import Match, Router
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 from . import __version__, config, db
 from .config import Settings
@@ -35,6 +37,8 @@ def create_app(settings: Settings) -> FastAPI:
 
     if not config.is_loopback(settings.host):
         _install_lan_guard(app)
+    if settings.root_path:
+        app.add_middleware(AcceptMountPrefix, prefix=settings.root_path, router=app.router)
 
     from fastapi.staticfiles import StaticFiles
 
@@ -56,6 +60,44 @@ def create_app(settings: Settings) -> FastAPI:
         }
 
     return app
+
+
+class AcceptMountPrefix:
+    """Answer on the prefixed paths a page emits, as well as on the bare ones.
+
+    A stripping proxy delivers bare paths, but the URLs the CLI prints name the
+    bind address, and opening one of those reaches the server with nothing in
+    between. The page then asks for `/mdreview/static/app.css` directly, so
+    without this the markup renders with no styling and no JavaScript.
+
+    A bare route always wins, so a prefix that shares a route's leading segment
+    — `/api`, say — cannot swallow the route the CLI talks to.
+    """
+
+    def __init__(self, app: ASGIApp, prefix: str, router: Router) -> None:
+        self.app = app
+        self.prefix = prefix
+        self.router = router
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] in ("http", "websocket"):
+            scope = self._strip(scope)
+        await self.app(scope, receive, send)
+
+    def _strip(self, scope: Scope) -> Scope:
+        root = scope.get("root_path", "")
+        path = scope["path"][len(root) :]
+        if path != self.prefix and not path.startswith(f"{self.prefix}/"):
+            return scope
+        if any(route.matches(scope)[0] is not Match.NONE for route in self.router.routes):
+            return scope
+        bare = path[len(self.prefix) :] or "/"
+        stripped = dict(scope, path=root + bare)
+        raw = scope.get("raw_path")
+        encoded = f"{root}{self.prefix}".encode()
+        if raw is not None and raw.startswith(encoded):
+            stripped["raw_path"] = root.encode() + (raw[len(encoded) :] or b"/")
+        return stripped
 
 
 def _install_lan_guard(app: FastAPI) -> None:

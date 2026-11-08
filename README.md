@@ -342,10 +342,11 @@ Leading and trailing slashes are optional; `mdreview`, `/mdreview` and
 `/mdreview/` are equivalent. Unset — the default — serves at the root exactly as
 before.
 
-Setting it declares how the browser reaches this instance, so reach it that way.
-The CLI keeps talking to the server directly and is unaffected, but the URLs it
-prints still name the bind address: opening one of those bypasses the proxy, and
-the page's assets — which are emitted under the prefix — will not resolve there.
+The server also answers on the prefixed paths, so the URLs the CLI prints —
+which name the bind address and bypass the proxy — still open a working page:
+its assets are emitted under the prefix, and nothing on that route strips it. A
+bare path always wins, so a prefix that shares a route's leading segment, such
+as `/api`, cannot shadow the API the CLI talks to.
 
 This pairs with the loopback default rather than working against it. Because
 mdreview has no authentication of its own, the natural place for it is behind a
